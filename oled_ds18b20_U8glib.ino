@@ -1,27 +1,28 @@
 #include <SPI.h>
 #include <Wire.h>
-//#include <Adafruit_GFX.h> //to many memoru used! 
-//#include <Adafruit_SSD1306.h>  
+//#include <Adafruit_GFX.h> //to many memoru used!
+//#include <Adafruit_SSD1306.h>
 #include <U8glib.h>
 #include <OneWire.h>
 #include <IRremote.h>
 #include <Time.h>
 #include <DS1307RTC.h>
+#include <EEPROM.h>
 
 
 #define Clock
 
 #define TempGraph
 //#define StartXGraph 50
-#define logsize 70
-#define logtime 1 //secs 
+#define logsize 50
+//#define Params[12] 1 //secs
 //30 sec*45 pos = 22 min
 //240 sec*45 pos = 3 hour
 //#define BigTemp
 //#define LoopGraph
 //#define LineGraph
 #define HeaterPin 13
-#define DEBUG_IR_Last_Line
+#define IR_Keys
 
 U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE | U8G_I2C_OPT_DEV_0); // I2C / TWI
 
@@ -33,70 +34,70 @@ U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE | U8G_I2C_OPT_DEV_0); // I2C / TWI
 //h: Height of the bitmap.
 //pointer name(BMP_Hot_Heater)
 const uint8_t BMP_Hot_Termometr[] U8G_PROGMEM = {
-0b00100010,
-0b01100111,
-0b00100010,
-0b01100000,
-0b00100000,
-0b01010000,
-0b01110000,
-0b00100000
+  0b00100010,
+  0b01100111,
+  0b00100010,
+  0b01100000,
+  0b00100000,
+  0b01010000,
+  0b01110000,
+  0b00100000
 
 };
 
 const uint8_t BMP_Cold_Termometr[] U8G_PROGMEM = {
-0b00100000,
-0b01100000,
-0b00100000,
-0b01100000,
-0b00100000,
-0b01010111,
-0b01110000,
-0b00100000
+  0b00100000,
+  0b01100000,
+  0b00100000,
+  0b01100000,
+  0b00100000,
+  0b01010111,
+  0b01110000,
+  0b00100000
 
 };
 const uint8_t BMP_Termometr[] U8G_PROGMEM = {
-0b00100010,
-0b01100101,
-0b00100100,
-0b01100101,
-0b00100010,
-0b01010000,
-0b01110000,
-0b00100000
+  0b00100010,
+  0b01100101,
+  0b00100100,
+  0b01100101,
+  0b00100010,
+  0b01010000,
+  0b01110000,
+  0b00100000
 
 };
 const uint8_t BMP_Hot_Heater[] U8G_PROGMEM = {
-0b00000000,
-0b01000010,
-0b10000100,
-0b01000010,
-0b10000100,
-0b01000010,
-0b11111111,
-0b01100110
+  0b00000000,
+  0b01000010,
+  0b10000100,
+  0b01000010,
+  0b10000100,
+  0b01000010,
+  0b11111111,
+  0b01100110
 
 };
 const uint8_t BMP_Cold_Heater[] U8G_PROGMEM = {
-0b00000000,
-0b00000000,
-0b00000000,
-0b00000000,
-0b00000000,
-0b01111110,
-0b11111111,
-0b01100110
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b00000000,
+  0b01111110,
+  0b11111111,
+  0b01100110
 
 };
 const uint8_t BMP_GoodTemp[] U8G_PROGMEM = {
-0b00100010,
-0b01100111,
-0b00100010,
-0b01100000,
-0b00100000,
-0b01010111,
-0b01110000,
-0b00100000
+  0b00100010,
+  0b01100111,
+  0b00100010,
+  0b01100000,
+  0b00100000,
+  0b01010111,
+  0b01110000,
+  0b00100000
 
 
 };
@@ -113,9 +114,6 @@ const uint8_t BMP_GoodTemp[] U8G_PROGMEM = {
 #define YPOS 1
 #define DELTAY 2
 
-//#if (SSD1306_LCDHEIGHT != 64)
-//#error("Height incorrect, please fix Adafruit_SSD1306.h!");
-//#endif
 
 // OneWire DS18S20, DS18B20, DS1822 Temperature Example
 //
@@ -135,16 +133,30 @@ int a, b, c, d;
 
 char TempLogIndex, TimeLogCounter = 0, TimeLogPosition;
 signed int TempLog[logsize];
-char GraphType = 1; //1-loop,2=line,3-line with limits
-char MaxTempLimit = 28 , minTempLimit = 22;
-char TetmostatOff = 25 , TetmostatOn = 24;
+
 char StartXGraph;
+
 char aac = 0;
 char aab;
-char HeaterState = 0;
-char GraphTop  = 40; //ToDo: написать изменение настройки - пока жестко фиксируется
+//char HeaterState = 0;
+//char GraphTop  = 40; //ToDo: написать изменение настройки - пока жестко фиксируется
 //char TimeLogPosition;
 float celsius;
+char Params[13] =
+{ 0, 0,
+  3, 40, 36, 25,//график
+  31, 29, 1, //термостат
+  0,//нагрузка
+  1, 1,
+  5
+  // 0-menu pos,1-признак меню,
+  //2-тип графика,3-высота графика,4-максимум графика,5-минимум графика,
+  //6-выключение термостата,7-включение термостата,8-темостат используется?,
+  //9-нагрузка сейчас включена?
+  //,10-показывать пределы термостатирования,11-показывать перделы графика
+  //12 - LogTime(сек)
+};
+const char * const MenuParamsName[] PROGMEM = {" nop", " nop1", "GType", "GHeight", "GMax", "Gmin", "T Off", "T ON", "TInUse", "LoadOn", "Sh T", "Sh G", "LogSec", "@EOM"};
 
 
 void setup(void) {
@@ -166,19 +178,12 @@ void setup(void) {
   u8g.setColorIndex(1);         // pixel on
   u8g.setFont(u8g_font_6x10r);
 
-  //Serial.begin(9600);
+ //Serial.begin(9600);
   irrecv.enableIRIn();
 
-  //  display.begin(SSD1306_SWITCHCAPVCC, 0x3c);  // initialize with the I2C addr 0x3c (for the 128x64)
-  //  display.setRotation(0); //(0 -normal, 2 - rotated 180)
-  //  display.display();
 
 
-  //  delay(100);
-  // Clear the buffer.
-  //  display.clearDisplay();
-
-StartXGraph = u8g.getWidth() - logsize - 2;
+  StartXGraph = u8g.getWidth() - logsize - 2;
 }
 tmElements_t tm;
 void loop(void) {
@@ -190,7 +195,7 @@ void loop(void) {
   byte data[12];
   byte addr[8];
 
-  
+
 
 
   if ( !ds.search(addr)) {
@@ -199,14 +204,14 @@ void loop(void) {
     return;
   }
 
-  if (OneWire::crc8(addr, 7) != addr[7]) { //ToDo: добавить обработчик ошибок - вдруг градусник потерялся... 
+  if (OneWire::crc8(addr, 7) != addr[7]) { //ToDo: добавить обработчик ошибок - вдруг градусник потерялся...
     //Serial.println("CRC is not valid!");
     return;
   }
 
 
   // the first ROM byte indicates which chip
-  switch (addr[0]) {
+  switch (addr[0]) {//todo: написать обработку исключения
     case 0x10:
       //     Serial.println("  Chip = DS18S20");  // or old DS1820
       type_s = 1;
@@ -233,7 +238,7 @@ void loop(void) {
   if (RTC.read(tm)) { //todo: нужно сделать настройку часов
 
   } else {
-    if (RTC.chipPresent()) {//todo: добавить иск
+    if (RTC.chipPresent()) {//todo: добавить исключение
       //      Serial.println("The DS1307 is stopped.  Please run the SetTime");
       //      Serial.println("example to initialize the time and begin running.");
       //      Serial.println();
@@ -284,20 +289,12 @@ void loop(void) {
   celsius = (float)raw / 16.0;
 
 
-  //#ifdef BigTemp
-  //  display.setCursor(2, 19);
-  //  display.setTextSize(2);
-  //  display.println(celsius, 1);
-  //  display.setTextSize(1);
-  //  display.println(" Celsius degree");
-  //#endif
-
   //кольцевой график темпиратуры
   TimeLogCounter++;
-  if (TimeLogCounter > logtime)
+  if (TimeLogCounter > Params[12])
   {
     TimeLogCounter = 0;
-    if (GraphType == 1) {
+    if (Params[2] == 1) {
       TempLogIndex++;
       if (TempLogIndex > logsize - 1)
       {
@@ -306,34 +303,53 @@ void loop(void) {
 
       TempLog[TempLogIndex] = (int)(celsius * 10);
     }
-    if (GraphType == 2) {
-      for (TimeLogPosition = 0; TimeLogPosition < logsize-1 ; TimeLogPosition++)
+    if (Params[2] == 2) {
+      for (TimeLogPosition = 0; TimeLogPosition < logsize - 1 ; TimeLogPosition++)
       {
         TempLog[TimeLogPosition] = TempLog[TimeLogPosition + 1];
       }
-      TempLog[logsize-1] = (int)(celsius * 10);
+      TempLog[logsize - 1] = (int)(celsius * 10);
     }
-        if (GraphType == 3) {
-      for (TimeLogPosition = 0; TimeLogPosition < logsize-1 ; TimeLogPosition++)
+    if (Params[2] == 3) {
+      for (TimeLogPosition = 0; TimeLogPosition < logsize - 1 ; TimeLogPosition++)
       {
         TempLog[TimeLogPosition] = TempLog[TimeLogPosition + 1];
       }
-      TempLog[logsize-1] = (int)(celsius * 10);
+      TempLog[logsize - 1] = (int)(celsius * 10);
     }
   }
   //конец кольцевой график темпиратуры
 
+  
+  //включение-выключение термостата
+    //6-выключение термостата,7-включение термостата,8-темостат используется?,
+  if (Params[8] == 1)
+  {
+    if (Params[7] > celsius)
+    {
+      Params[9] = 1;
+    }
+    if (Params[6] < celsius)
+    {
+      Params[9] = 0;
+    }
+  }
+  
+  //включение-выключение нагрузки
+  if (Params[9] == 1)
+  {
+    digitalWrite(HeaterPin, HIGH);
+  }
+  if (Params[9] == 0)
+  {
+    digitalWrite(HeaterPin, LOW);
+  }
+  //конец включение-выключение нагрузки
 
-#ifdef DEBUG_IR_Last_Line
+#ifdef IR_Keys
   if (irrecv.decode(&results))
   {
-    //Serial.println("0x");
-    //u8g.setPrintPos(4, (u8g.getHeight() - 9));  // Устанавливаю курсор печати
-    //display.setCursor(4, u8g.getHeight()- 9);
-    //u8g.print(results.value, HEX);
-    //u8g.print(" ");
-
-    //char GraphType = 1; //1-loop,2=line,3=maxmin limits
+    // Param[2] = 1; //1-loop,2=line,3=maxmin limits
     switch (results.value)
     {
       //режим графика
@@ -341,21 +357,21 @@ void loop(void) {
         {
           //TODO:нарисовать тип графика
           //u8g.print("<>");
-          GraphType = 1;
+          //GraphType = 1;
           break;
         }
       case 0xFF02FD:
         {
           //TODO:нарисовать тип графика
           //u8g.print("->");
-          GraphType = 2;
+          //GraphType = 2;
           break;
         }
       case 0xFF22DD:
         {
           //TODO:нарисовать тип графика
           //u8g.print("(-)");
-          GraphType = 3;
+          //GraphType = 3;
           break;
         }
       //конец режим графика
@@ -363,48 +379,97 @@ void loop(void) {
       case 0xFFA25D:
         {
           //u8g.print("X-");
-          MaxTempLimit--;
+          Params[4]--;
           break;
         }
       case 0xFF629D:
         {
-          MaxTempLimit++;
+          Params[4]++;
           break;
         }
       //endmax temp limit correction
       //min temp limit correction
       case 0xFFE01F:
         {
-          minTempLimit--;
+          Params[5]--;
           break;
         }
       case 0xFFA857:
         {
           //u8g.print("X+");
-          minTempLimit++;
+          Params[5]++;
           break;
         }
       //end min temp limit correction
       //switch Heater
       case 0xFFE21D:
         {
-          if (HeaterState == 0)
+          if (Params[9] == 0)
           {
 
-            HeaterState = 1;
-            digitalWrite(HeaterPin, HIGH);
+            Params[9] = 1;
             break;
           }
-          if (HeaterState == 1)
+          if (Params[9] == 1)
           {
 
-            HeaterState = 0;
-            digitalWrite(HeaterPin, LOW);
+            Params[9] = 0;
             break;
           }
           break;
         }
-        //End switch heater
+      //End switch heater
+
+      case 0xFF52AD:
+        {
+          if (Params[0] == 0)
+          {
+
+            Params[0] = 1;
+
+            break;
+          }
+          if (Params[0] >= 1)
+          {
+
+            Params[0] = 0;
+
+            break;
+          }
+
+          break;
+
+        }
+      case 0xFF5AA5://6
+        {
+          if (Params[0] < 25) { //max 25 position 1 lvl menu
+            Params[0]++;
+          }
+          break;
+        }
+      case 0xFF10EF://4
+        {
+          if (Params[0] > 1) {
+            Params[0]--;
+          }
+          break;
+        }
+      case 0xFF18E7://2
+        {
+          if (Params[0] > 1) {
+            Params[Params[0]]++;
+          }
+
+          break;
+        }
+      case 0xFF4AB5:
+        {
+          if (Params[0] > 1) {
+            Params[Params[0]]--;
+          }
+
+          break;
+        }
 
     }
     delay(50);
@@ -431,172 +496,186 @@ void print2screen(int number) {
 }
 
 void draw(void) {
-  // graphic commands to redraw the complete screen should be placed here
-  // u8g.setFont(u8g_font_6x10);
-  //u8g.setFont(u8g_font_osb21);
-  //u8g.setPrintPos(4, 12);  // Устанавливаю курсор печати
-  //u8g.print("ultrasonic"); // Печатаю строчку
+  if (Params[0] == 0) {
+    // graphic commands to redraw the complete screen should be placed here
+    // u8g.setFont(u8g_font_6x10);
+    //u8g.setFont(u8g_font_osb21);
+    //u8g.setPrintPos(4, 12);  // Устанавливаю курсор печати
+    //u8g.print("ultrasonic"); // Печатаю строчку
+    //  u8g.drawStr( 4, 12, "Hello World!");
 
+#ifdef Oled_Frame
+    u8g.drawFrame(0, 0, u8g.getWidth(), 16);
+    u8g.drawFrame(0, 16, u8g.getWidth(), (u8g.getHeight() - 16));
+#endif
 
-  //  u8g.drawStr( 4, 12, "Hello World!");
-  u8g.drawFrame(0, 0, u8g.getWidth(), 16);
-  u8g.drawFrame(0, 16, u8g.getWidth(), (u8g.getHeight() - 16));
-
- //nokia size screen frame
- u8g.drawFrame(0, 0,84, 48);
+#ifdef Nokia_Frame
+    //nokia size screen frame
+    u8g.drawFrame(0, 0, 84, 48);
+#endif
 
 #ifndef BigTemp
-  //u8g.setPrintPos(4, 12);
-  //display.setCursor(4, 4);
-  //display.setTextSize(1);
-  //u8g.print("T=");
-  u8g.drawBitmapP( 3, 4, 1, 8, BMP_Termometr);
-  u8g.setPrintPos(13, 12);
-  //u8g.print("=");
-  if (celsius >= 0)
-  {
-  u8g.print(celsius, 1);
-  }else {
-    u8g.print(celsius,0);
-  }
-  //u8g.print(" ");
-  //display.println(" |");
-  //display.setCursor(4, 4);
-  if (HeaterState == 0)
-  {
-    u8g.drawBitmapP( 39, 4, 1, 8, BMP_Cold_Heater);
-    //u8g.setFont(u8g_font_unifont_75r);
-    //u8g.setFont(u8g_font_unifont_76);
-    //char rrrrrr = 0x29;//empty doted circle
-    //char rrrrrr = 0x4c;//empty doted circle
-    //u8g.print(rrrrrr);
-    //u8g.drawCircle(50, 7, 4);
-    //u8g.setFont(u8g_font_6x10);
-  }
-  if (HeaterState == 1)
-  {
-    //u8g.setFont(u8g_font_unifont_76);
-    //char rrrrrr = 0x35;// circle
-    u8g.drawBitmapP( 39, 4, 1, 8, BMP_Hot_Heater);
-    //u8g.setFont(u8g_font_unifont_75r);
-    //char rrrrrr = 0x4F;// circle
-    //u8g.print(rrrrrr);
-    //u8g.drawCircle(50, 7, 4);
-    //u8g.setFont(u8g_font_6x10);
+    u8g.drawBitmapP( 3, 4, 1, 8, BMP_Termometr);
+    u8g.setPrintPos(13, 12);
 
-//    u8g.drawDisc(50, 7, 4);
-  }
-
-  //display.setTextSize(1);
-  //  display.println(" Celsius degree");
+    if (celsius >= 0)
+    {
+      u8g.print(celsius, 1);
+    } else {
+      u8g.print(celsius, 0);
+    }
+    if (Params[9] == 0)
+    {
+      u8g.drawBitmapP( 39, 4, 1, 8, BMP_Cold_Heater);
+      //u8g.drawCircle(50, 7, 4);
+    }
+    if (Params[9] == 1)
+    {
+      u8g.drawBitmapP( 39, 4, 1, 8, BMP_Hot_Heater);
+      //    u8g.drawDisc(50, 7, 4);
+    }
 #endif
 #ifdef Clock //писать сверху время
-  
-  u8g.setPrintPos(51, 12);
-  print2screen(tm.Hour);
-  //u8g.print(tm.Hour);
-if (tm.Second%2)
-{
-  u8g.print( ":");
-}else 
-{ 
-  u8g.print( ".");
-}
-  print2screen(tm.Minute);
-  //u8g.print(tm.Minute);
-  u8g.print(":");
-  print2screen(tm.Second);
-  //u8g.print(tm.Second);
 
-  //print2screen(tm.Second);
+    u8g.setPrintPos(52, 12);
+    print2screen(tm.Hour);
+    //u8g.print(tm.Hour);
+    if (tm.Second % 2)
+    {
+      u8g.print( ":");
+    } else
+    {
+      u8g.print( ".");
+    }
+    print2screen(tm.Minute);
+    //u8g.print(tm.Minute);
+    u8g.print(":");
+    print2screen(tm.Second);
+    //u8g.print(tm.Second);
+
+    //print2screen(tm.Second);
 #endif
 
-  u8g.setPrintPos(4, 50);
-  u8g.print(GraphType, DEC);
-  //кольцевой график темпиратуры
-  if (GraphType == 1) {
-    for (aab = 0; aab < logsize ; aab++)
-    {
-      u8g.drawPixel((StartXGraph + aab), ((u8g.getHeight() - 2) - TempLog[aab] / 10));
+    u8g.setPrintPos(4, 50);
+    u8g.print(Params[2], DEC);
+    //кольцевой график темпиратуры
+    if (Params[2] == 1) {
+      for (aab = 0; aab < logsize ; aab++)
+      {
+        u8g.drawPixel((StartXGraph + aab), ((u8g.getHeight() - 2) - TempLog[aab] / 10));
+      }
+      u8g.drawLine((StartXGraph + TempLogIndex), (u8g.getHeight() - 40) , (StartXGraph + TempLogIndex), (u8g.getHeight() - 10));
     }
-    u8g.drawLine((StartXGraph + TempLogIndex), (u8g.getHeight() - 40) , (StartXGraph + TempLogIndex), (u8g.getHeight() - 10));
-  }
-  if (GraphType == 2)
+    if (Params[2] == 2)
+    {
+
+      for (aab = 0; aab < logsize ; aab++)
+      {
+        u8g.drawPixel((StartXGraph + aab), ((u8g.getHeight() - 2) - TempLog[aab] / 10));
+      }
+    }
+    if (Params[2] == 3)//GraphType
+    {
+
+      //horisontal lines
+
+      //low
+      u8g.drawLine((StartXGraph), (u8g.getHeight() - 2 ) , (StartXGraph + logsize), (u8g.getHeight() - 2));
+      //hi
+      u8g.drawLine((StartXGraph), (u8g.getHeight() - 2 - Params[3]) , (StartXGraph + logsize), (u8g.getHeight() - 2 - Params[3]));
+      //end horisontal lines
+
+      //vertical lines
+      u8g.drawLine((StartXGraph), (u8g.getHeight() - 2 ) , (StartXGraph), (u8g.getHeight() - 2 - Params[3]));
+      u8g.drawLine((StartXGraph + logsize), (u8g.getHeight() - 2 ) , (StartXGraph + logsize), (u8g.getHeight() - 2 - Params[3]));
+      //end vertical lines
+
+      //написали минимум
+      u8g.setPrintPos((StartXGraph - 14), u8g.getHeight() - 3);
+      u8g.print(Params[5], DEC);
+      //написали максимум
+      u8g.setPrintPos((StartXGraph - 14), u8g.getHeight() - 2 - (Params[3] - u8g.getFontAscent()));
+      //display.setTextSize(1);
+      u8g.print(Params[4], DEC);
+
+      //осталось нарисовать сам график - не забыть пересчитать масштаб.
+      char aab;
+      char Ypos;
+      char oldYpos = 0;
+      for (aab = 0; aab < logsize ; aab++)
+      {
+        //высота графика 30 пикселей
+        //макслимит-минлимит = размер графика
+        //30/размер графика = цена деления графика
+        //(TempLog[aab] / 10)-минлимит = количесво делений в этой позиции
+        //((TempLog[aab] / 10)-минлимит) * цена деления = высота точки
+        //(((TempLog[aab] / 10)-Params[5]) * (30/(Params[4]-Params[5])))
+        //
+        oldYpos = Ypos;
+        Ypos = ((u8g.getHeight() - 2) - (((TempLog[aab] / 10) - Params[5]) * (Params[3] / (Params[4] - Params[5]))));
+
+        if ( Ypos >= (u8g.getHeight() - 2))
+        {
+          Ypos = (u8g.getHeight() - 3);
+        }
+        if ( Ypos <= (u8g.getHeight() - 2 - Params[3]))
+        {
+          Ypos = (u8g.getHeight() - 2 - (Params[3] - 1));
+        }
+        if ( oldYpos >= (u8g.getHeight() - 2))
+        {
+          oldYpos = (u8g.getHeight() - 3);
+        }
+        if ( oldYpos <= (u8g.getHeight() - 2 - Params[3]))
+        {
+          oldYpos = (u8g.getHeight() - 2 - (Params[3] - 1));
+        }
+
+
+        u8g.drawLine((StartXGraph + aab - 1), oldYpos, (StartXGraph + aab), Ypos);
+        //u8g.drawPixel((StartXGraph + aab), Ypos);
+
+
+      }
+
+
+
+
+    }
+    //конец кольцевой график
+      if (Params[8] == 1)
+      {
+      //6-выключение термостата,7-включение термостата,8-темостат используется?,
+      u8g.setPrintPos(4, 24);
+      //char * ptr = (char *) pgm_read_word (&MenuParamsName[Params[6]]);      
+      //u8g.print (ptr);
+      u8g.print ("T Off=");
+      u8g.print(Params[6], DEC);
+      u8g.setPrintPos(4, 33);
+      u8g.print ("T On=");
+      //char * ptr1 = (char *) pgm_read_word (&MenuParamsName[Params[7]]);      
+      //u8g.print (ptr1);
+      u8g.print(Params[7], DEC);
+      }
+
+  }//if Params[0] == 0 end
+  else if (Params[0] > 0)
   {
+    u8g.setPrintPos(13, 12);
+    u8g.print("menu");
 
-    for (aab = 0; aab < logsize ; aab++)
-    {
-      u8g.drawPixel((StartXGraph + aab), ((u8g.getHeight() - 2) - TempLog[aab] / 10));
-    }
-  }
-  if( GraphType == 3)
-  {
-
-        //horisontal lines
-    
-    //low
-    u8g.drawLine((StartXGraph), (u8g.getHeight() - 2 ) , (StartXGraph + logsize), (u8g.getHeight() - 2));
-    //hi
-    u8g.drawLine((StartXGraph), (u8g.getHeight() - 2 - GraphTop) , (StartXGraph + logsize), (u8g.getHeight() - 2 - GraphTop));
-    //end horisontal lines
-
-    //vertical lines
-    u8g.drawLine((StartXGraph), (u8g.getHeight() - 2 ) , (StartXGraph), (u8g.getHeight() - 2 - GraphTop));
-    u8g.drawLine((StartXGraph + logsize), (u8g.getHeight() - 2 ) , (StartXGraph + logsize), (u8g.getHeight() - 2 - GraphTop));
-    //end vertical lines
-    //написали минимум
-    u8g.setPrintPos((StartXGraph - 14), u8g.getHeight() - 3);
-    u8g.print(minTempLimit, DEC);
-    //написали максимум
-    u8g.setPrintPos((StartXGraph - 14), u8g.getHeight() - 2 - (GraphTop - u8g.getFontAscent()));
-    //display.setTextSize(1);
-    u8g.print(MaxTempLimit, DEC);
-    
-    //осталось нарисовать сам график - не забыть пересчитать масштаб.
-    char aab;
-    char Ypos;
-    char oldYpos = 0;
-    for (aab = 0; aab < logsize ; aab++)
-    {
-      //высота графика 30 пикселей
-      //макслимит-минлимит = размер графика
-      //30/размер графика = цена деления графика
-      //(TempLog[aab] / 10)-минлимит = количесво делений в этой позиции
-      //((TempLog[aab] / 10)-минлимит) * цена деления = высота точки
-      //(((TempLog[aab] / 10)-minTempLimit) * (30/(MaxTempLimit-minTempLimit)))
-      //
-      oldYpos = Ypos;
-      Ypos = ((u8g.getHeight() - 2) - (((TempLog[aab] / 10) - minTempLimit) * (GraphTop / (MaxTempLimit - minTempLimit))));
-      
-      if ( Ypos >= (u8g.getHeight() - 2))
-      {
-        Ypos = (u8g.getHeight() - 3);
-      }
-      if ( Ypos <= (u8g.getHeight() - 2 - GraphTop))
-      {
-        Ypos = (u8g.getHeight() - 2 - (GraphTop - 1));
-      }
-      if ( oldYpos >= (u8g.getHeight() - 2))
-      {
-        oldYpos = (u8g.getHeight() - 3);
-      }
-      if ( oldYpos <= (u8g.getHeight() - 2 - GraphTop))
-      {
-        oldYpos = (u8g.getHeight() - 2 - (GraphTop - 1));
-      }
-      
-
-      u8g.drawLine((StartXGraph + aab -1), oldYpos,(StartXGraph + aab), Ypos);
-      //u8g.drawPixel((StartXGraph + aab), Ypos);
-
-
+    if (Params[0] > 1) {//GraphTupe
+      char * ptr = (char *) pgm_read_word (&MenuParamsName[Params[0]]);
+      u8g.setPrintPos(4, 24);
+      u8g.print (ptr);
+      u8g.print ("=");
+      u8g.print(Params[Params[0]], DEC);
+      u8g.print ("|");
     }
 
-
-  
-  
+    u8g.setPrintPos(4, 62);
+    u8g.print ("ParamNum= ");
+    u8g.print(Params[0], DEC);
   }
-  //конец кольцевой график
-
 
 }
