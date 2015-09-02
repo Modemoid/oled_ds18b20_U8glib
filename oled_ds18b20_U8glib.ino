@@ -11,7 +11,6 @@
 
 
 #define Clock
-
 #define TempGraph
 //#define StartXGraph 50
 #define logsize 50
@@ -131,11 +130,12 @@ decode_results results;
 int a, b, c, d;
 
 
+int address = 0; //for EEProm
+
+
 char TempLogIndex, TimeLogCounter = 0, TimeLogPosition;
 signed int TempLog[logsize];
-
 char StartXGraph;
-
 char aac = 0;
 char aab;
 //char HeaterState = 0;
@@ -144,7 +144,7 @@ char aab;
 float celsius;
 char Params[13] =
 { 0, 0,
-  3, 40, 36, 25,//график
+  1, 10, 30, 20,//график
   31, 29, 1, //термостат
   0,//нагрузка
   1, 1,
@@ -178,12 +178,18 @@ void setup(void) {
   u8g.setColorIndex(1);         // pixel on
   u8g.setFont(u8g_font_6x10r);
 
+EELoad(13);
+
+//reading EEProm start values
+//for (address = 0; address<13; address++)
+//{
+//Params[address] = EEPROM.read(address);
+//delay(50);
+//}
  //Serial.begin(9600);
   irrecv.enableIRIn();
 
-
-
-  StartXGraph = u8g.getWidth() - logsize - 2;
+StartXGraph = u8g.getWidth() - logsize - 2;
 }
 tmElements_t tm;
 void loop(void) {
@@ -406,7 +412,6 @@ void loop(void) {
         {
           if (Params[9] == 0)
           {
-
             Params[9] = 1;
             break;
           }
@@ -462,12 +467,18 @@ void loop(void) {
 
           break;
         }
-      case 0xFF4AB5:
+      case 0xFF4AB5://8
         {
           if (Params[0] > 1) {
             Params[Params[0]]--;
           }
 
+          break;
+        }
+        case 0xFF38C7://5 save to EEprom
+        {
+          Params[0] = 0;
+          EESave(13);
           break;
         }
 
@@ -678,4 +689,21 @@ void draw(void) {
     u8g.print(Params[0], DEC);
   }
 
+}
+void EESave(int NumOfChar){
+for (address = 0; address<NumOfChar; address++)
+{
+EEPROM[address] = Params[address];
+delay(100);
+//Params[aac] = EEPROM.read(aac);
+}
+}
+
+void EELoad(int NumOfChar){
+for (address = 0; address<NumOfChar; address++)
+{
+ Params[address] = EEPROM[address];
+delay(100);
+//Params[aac] = EEPROM.read(aac);
+}
 }
