@@ -231,21 +231,9 @@ void loop(void) {
 
 #ifdef Clock
   if (RTC.read(tm)) { //todo: нужно сделать настройку часов
-    //    Serial.print("Ok, Time = ");
-    //    print2digits(tm.Hour);
-    //    Serial.write(':');
-    //    print2digits(tm.Minute);
-    //    Serial.write(':');
-    //    print2digits(tm.Second);
-    //    Serial.print(", Date (D/M/Y) = ");
-    //    Serial.print(tm.Day);
-    //    Serial.write('/');
-    //   Serial.print(tm.Month);
-    //    Serial.write('/');
-    //    Serial.print(tmYearToCalendar(tm.Year));
-    //    Serial.println();
+
   } else {
-    if (RTC.chipPresent()) {
+    if (RTC.chipPresent()) {//todo: добавить иск
       //      Serial.println("The DS1307 is stopped.  Please run the SetTime");
       //      Serial.println("example to initialize the time and begin running.");
       //      Serial.println();
@@ -335,20 +323,6 @@ void loop(void) {
   }
   //конец кольцевой график темпиратуры
 
-
-#ifdef DEBUG_DISP_Last_Line
-
-//TODO:вычистить отладочные переменные
-
-  int aaa ;
-  aaa = (int)(celsius * 1000);
-  // display.setCursor(display.width()/2,display.height()-9);
-
-  //display.setCursor(2, u8g.getHeight() - 9);
-  //display.print(".");
-  //display.print(aaa % 1000);
-  //display.print(" ");
-#endif
 
 #ifdef DEBUG_IR_Last_Line
   if (irrecv.decode(&results))
@@ -468,6 +442,9 @@ void draw(void) {
   u8g.drawFrame(0, 0, u8g.getWidth(), 16);
   u8g.drawFrame(0, 16, u8g.getWidth(), (u8g.getHeight() - 16));
 
+ //nokia size screen frame
+ u8g.drawFrame(0, 0,84, 48);
+
 #ifndef BigTemp
   //u8g.setPrintPos(4, 12);
   //display.setCursor(4, 4);
@@ -475,14 +452,19 @@ void draw(void) {
   //u8g.print("T=");
   u8g.drawBitmapP( 3, 4, 1, 8, BMP_Termometr);
   u8g.setPrintPos(13, 12);
-  u8g.print("=");
+  //u8g.print("=");
+  if (celsius >= 0)
+  {
   u8g.print(celsius, 1);
-  u8g.print(" ");
+  }else {
+    u8g.print(celsius,0);
+  }
+  //u8g.print(" ");
   //display.println(" |");
   //display.setCursor(4, 4);
   if (HeaterState == 0)
   {
-    u8g.drawBitmapP( 50, 4, 1, 8, BMP_Cold_Heater);
+    u8g.drawBitmapP( 39, 4, 1, 8, BMP_Cold_Heater);
     //u8g.setFont(u8g_font_unifont_75r);
     //u8g.setFont(u8g_font_unifont_76);
     //char rrrrrr = 0x29;//empty doted circle
@@ -495,7 +477,7 @@ void draw(void) {
   {
     //u8g.setFont(u8g_font_unifont_76);
     //char rrrrrr = 0x35;// circle
-    u8g.drawBitmapP( 50, 4, 1, 8, BMP_Hot_Heater);
+    u8g.drawBitmapP( 39, 4, 1, 8, BMP_Hot_Heater);
     //u8g.setFont(u8g_font_unifont_75r);
     //char rrrrrr = 0x4F;// circle
     //u8g.print(rrrrrr);
@@ -510,10 +492,16 @@ void draw(void) {
 #endif
 #ifdef Clock //писать сверху время
   
-  u8g.setPrintPos(76, 12);
+  u8g.setPrintPos(51, 12);
   print2screen(tm.Hour);
   //u8g.print(tm.Hour);
+if (tm.Second%2)
+{
   u8g.print( ":");
+}else 
+{ 
+  u8g.print( ".");
+}
   print2screen(tm.Minute);
   //u8g.print(tm.Minute);
   u8g.print(":");
