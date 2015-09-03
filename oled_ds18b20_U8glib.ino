@@ -21,7 +21,9 @@
 //#define LoopGraph
 //#define LineGraph
 #define HeaterPin 13
+#define LoadShowPin 12
 #define IR_Keys
+#define Nokia_Frame
 
 U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE | U8G_I2C_OPT_DEV_0); // I2C / TWI
 
@@ -56,25 +58,27 @@ const uint8_t BMP_Cold_Termometr[] U8G_PROGMEM = {
 
 };
 const uint8_t BMP_Termometr[] U8G_PROGMEM = {
-  0b00100010,
-  0b01100101,
-  0b00100100,
-  0b01100101,
-  0b00100010,
-  0b01010000,
-  0b01110000,
-  0b00100000
+  0b01000100,
+  0b11001010,
+  0b01001000,
+  0b11001010,
+  0b01000100,
+  0b10100000,
+  0b11100000,
+  0b01000000
+
 
 };
 const uint8_t BMP_Hot_Heater[] U8G_PROGMEM = {
-  0b00000000,
-  0b01000010,
-  0b10000100,
-  0b01000010,
-  0b10000100,
-  0b01000010,
-  0b11111111,
-  0b01100110
+  0b00001000,
+  0b00010000,
+  0b00100000,
+  0b00010000,
+  0b00001000,
+  0b00010000,
+  0b01111110,
+  0b00100100
+
 
 };
 const uint8_t BMP_Cold_Heater[] U8G_PROGMEM = {
@@ -83,9 +87,10 @@ const uint8_t BMP_Cold_Heater[] U8G_PROGMEM = {
   0b00000000,
   0b00000000,
   0b00000000,
+  0b00000000,
   0b01111110,
-  0b11111111,
-  0b01100110
+  0b00100100
+
 
 };
 const uint8_t BMP_GoodTemp[] U8G_PROGMEM = {
@@ -172,24 +177,27 @@ void setup(void) {
 
   //heater
   pinMode(HeaterPin, OUTPUT);
+  pinMode(LoadShowPin, OUTPUT);
   digitalWrite(HeaterPin, LOW);
+  digitalWrite(LoadShowPin, LOW);
+
 
   //U8glib setup
   u8g.setColorIndex(1);         // pixel on
   u8g.setFont(u8g_font_6x10r);
 
-EELoad(13);
+  EELoad(13);
 
-//reading EEProm start values
-//for (address = 0; address<13; address++)
-//{
-//Params[address] = EEPROM.read(address);
-//delay(50);
-//}
- //Serial.begin(9600);
+  //reading EEProm start values
+  //for (address = 0; address<13; address++)
+  //{
+  //Params[address] = EEPROM.read(address);
+  //delay(50);
+  //}
+  //Serial.begin(9600);
   irrecv.enableIRIn();
 
-StartXGraph = u8g.getWidth() - logsize - 2;
+  StartXGraph = u8g.getWidth() - logsize - 2;
 }
 tmElements_t tm;
 void loop(void) {
@@ -326,9 +334,9 @@ void loop(void) {
   }
   //конец кольцевой график темпиратуры
 
-  
+
   //включение-выключение термостата
-    //6-выключение термостата,7-включение термостата,8-темостат используется?,
+  //6-выключение термостата,7-включение термостата,8-темостат используется?,
   if (Params[8] == 1)
   {
     if (Params[7] > celsius)
@@ -340,15 +348,17 @@ void loop(void) {
       Params[9] = 0;
     }
   }
-  
+
   //включение-выключение нагрузки
   if (Params[9] == 1)
   {
     digitalWrite(HeaterPin, HIGH);
+    digitalWrite(LoadShowPin, HIGH);
   }
   if (Params[9] == 0)
   {
     digitalWrite(HeaterPin, LOW);
+    digitalWrite(LoadShowPin, LOW);
   }
   //конец включение-выключение нагрузки
 
@@ -408,7 +418,7 @@ void loop(void) {
         }
       //end min temp limit correction
       //switch Heater
-      case 0xFFE21D:
+      case 0xFFE21D: //ch+ switch heater
         {
           if (Params[9] == 0)
           {
@@ -425,7 +435,7 @@ void loop(void) {
         }
       //End switch heater
 
-      case 0xFF52AD:
+      case 0xFF52AD: //9 menu
         {
           if (Params[0] == 0)
           {
@@ -445,21 +455,21 @@ void loop(void) {
           break;
 
         }
-      case 0xFF5AA5://6
+      case 0xFF5AA5://6 следующий  параметр
         {
-          if (Params[0] < 25) { //max 25 position 1 lvl menu
+          if (Params[0] < 15) { //max 25 position 1 lvl menu
             Params[0]++;
           }
           break;
         }
-      case 0xFF10EF://4
+      case 0xFF10EF://4 пердыдущий параметр
         {
           if (Params[0] > 1) {
             Params[0]--;
           }
           break;
         }
-      case 0xFF18E7://2
+      case 0xFF18E7://2 увеличить значение параметра
         {
           if (Params[0] > 1) {
             Params[Params[0]]++;
@@ -467,7 +477,7 @@ void loop(void) {
 
           break;
         }
-      case 0xFF4AB5://8
+      case 0xFF4AB5://8 уменьшить значение параметра
         {
           if (Params[0] > 1) {
             Params[Params[0]]--;
@@ -475,7 +485,7 @@ void loop(void) {
 
           break;
         }
-        case 0xFF38C7://5 save to EEprom
+      case 0xFF38C7://5 save to EEprom
         {
           Params[0] = 0;
           EESave(13);
@@ -527,7 +537,7 @@ void draw(void) {
 
 #ifndef BigTemp
     u8g.drawBitmapP( 3, 4, 1, 8, BMP_Termometr);
-    u8g.setPrintPos(13, 12);
+    u8g.setPrintPos(12, 12);
 
     if (celsius >= 0)
     {
@@ -537,18 +547,32 @@ void draw(void) {
     }
     if (Params[9] == 0)
     {
-      u8g.drawBitmapP( 39, 4, 1, 8, BMP_Cold_Heater);
+      u8g.drawBitmapP( 35, 4, 1, 8, BMP_Cold_Heater);
       //u8g.drawCircle(50, 7, 4);
     }
-    if (Params[9] == 1)
+    if (Params[9])
     {
-      u8g.drawBitmapP( 39, 4, 1, 8, BMP_Hot_Heater);
+      u8g.drawBitmapP( 35, 4, 1, 8, BMP_Hot_Heater);
       //    u8g.drawDisc(50, 7, 4);
+    }
+    if (Params[8]) //termostat pic
+    {
+      if (Params[7] > celsius)
+      {
+        u8g.drawBitmapP( 43, 4, 1, 8, BMP_Cold_Termometr);//too cold
+      }
+      else if (Params[6] < celsius)
+      {
+        u8g.drawBitmapP( 43, 4, 1, 8, BMP_Hot_Termometr);//too Hot
+      } else
+      {
+        u8g.drawBitmapP( 43, 4, 1, 8, BMP_GoodTemp);//termoBMP
+      }
     }
 #endif
 #ifdef Clock //писать сверху время
 
-    u8g.setPrintPos(52, 12);
+    u8g.setPrintPos(53, 12);//было 52
     print2screen(tm.Hour);
     //u8g.print(tm.Hour);
     if (tm.Second % 2)
@@ -654,27 +678,23 @@ void draw(void) {
 
     }
     //конец кольцевой график
-      if (Params[8] == 1)
-      {
-      //6-выключение термостата,7-включение термостата,8-темостат используется?,
-      u8g.setPrintPos(4, 24);
-      //char * ptr = (char *) pgm_read_word (&MenuParamsName[Params[6]]);      
-      //u8g.print (ptr);
-      u8g.print ("T Off=");
+    if ((Params[8] == 1 )&&(Params[10] == 1 ) )
+    {
+      //Params[*] 6-выключение термостата,7-включение термостата,8-темостат используется?,
+      //10-показывать пределы термостатирования,
+      //printing termostat zone
+      u8g.setPrintPos(4, 24); 
       u8g.print(Params[6], DEC);
-      u8g.setPrintPos(4, 33);
-      u8g.print ("T On=");
-      //char * ptr1 = (char *) pgm_read_word (&MenuParamsName[Params[7]]);      
-      //u8g.print (ptr1);
+      u8g.print (">T>");
       u8g.print(Params[7], DEC);
-      }
+      //end printing termostat zone
+    }
 
   }//if Params[0] == 0 end
-  else if (Params[0] > 0)
+  else if (Params[0] > 0) //menu
   {
-    u8g.setPrintPos(13, 12);
+    u8g.setPrintPos(2, 12);
     u8g.print("menu");
-
     if (Params[0] > 1) {//GraphTupe
       char * ptr = (char *) pgm_read_word (&MenuParamsName[Params[0]]);
       u8g.setPrintPos(4, 24);
@@ -690,20 +710,20 @@ void draw(void) {
   }
 
 }
-void EESave(int NumOfChar){
-for (address = 0; address<NumOfChar; address++)
-{
-EEPROM[address] = Params[address];
-delay(100);
-//Params[aac] = EEPROM.read(aac);
-}
+void EESave(int NumOfChar) {
+  for (address = 0; address < NumOfChar; address++)
+  {
+    EEPROM[address] = Params[address];
+    //delay(100);
+    //Params[aac] = EEPROM.read(aac);
+  }
 }
 
-void EELoad(int NumOfChar){
-for (address = 0; address<NumOfChar; address++)
-{
- Params[address] = EEPROM[address];
-delay(100);
-//Params[aac] = EEPROM.read(aac);
-}
+void EELoad(int NumOfChar) {
+  for (address = 0; address < NumOfChar; address++)
+  {
+    Params[address] = EEPROM[address];
+    //delay(100);
+    //Params[aac] = EEPROM.read(aac);
+  }
 }
