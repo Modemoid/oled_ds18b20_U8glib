@@ -20,10 +20,11 @@
 //#define BigTemp
 //#define LoopGraph
 //#define LineGraph
-#define HeaterPin 13
-#define LoadShowPin 12
+#define HeaterPin 11
+#define LoadShowPin 13
+#define LoadRelaxPin 12
 #define IR_Keys
-#define Nokia_Frame
+//#define Nokia_Frame
 
 U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE | U8G_I2C_OPT_DEV_0); // I2C / TWI
 
@@ -147,21 +148,22 @@ char aab;
 //char GraphTop  = 40; //ToDo: написать изменение настройки - пока жестко фиксируется
 //char TimeLogPosition;
 float celsius;
-char Params[13] =
+#define ParamCount 15
+char Params[ParamCount] =
 { 0, 0,
   1, 10, 30, 20,//график
   31, 29, 1, //термостат
   0,//нагрузка
   1, 1,
-  5
+  5,1,ParamCount
   // 0-menu pos,1-признак меню,
   //2-тип графика,3-высота графика,4-максимум графика,5-минимум графика,
   //6-выключение термостата,7-включение термостата,8-темостат используется?,
   //9-нагрузка сейчас включена?
   //,10-показывать пределы термостатирования,11-показывать перделы графика
-  //12 - LogTime(сек)
+  //12 - LogTime(сек),13 screen revers,paramcount
 };
-const char * const MenuParamsName[] PROGMEM = {" nop", " nop1", "GType", "GHeight", "GMax", "Gmin", "T Off", "T ON", "TInUse", "LoadOn", "Sh T", "Sh G", "LogSec", "@EOM"};
+const char * const MenuParamsName[] PROGMEM = {" nop", " nop1", "GType", "GHeight", "GMax", "Gmin", "T Off", "T ON", "TInUse", "LoadOn", "Sh T", "Sh G", "LogSec","SCR revers","ParamCount","@EOM"};
 
 
 void setup(void) {
@@ -169,24 +171,38 @@ void setup(void) {
   pinMode(8, OUTPUT);
   digitalWrite(8, HIGH);
 
+  /*
   //pin setup for irreciver - power from d5 pin gnd - d6 amd siglai is d7 pin
   pinMode(5, OUTPUT);
   digitalWrite(5, HIGH);
   pinMode(6, OUTPUT);
   digitalWrite(6, LOW);
-
+*/
   //heater
   pinMode(HeaterPin, OUTPUT);
   pinMode(LoadShowPin, OUTPUT);
+   pinMode(LoadRelaxPin, OUTPUT);
   digitalWrite(HeaterPin, LOW);
   digitalWrite(LoadShowPin, LOW);
+ digitalWrite(LoadShowPin, HIGH);
 
+ EELoad(ParamCount);
 
   //U8glib setup
   u8g.setColorIndex(1);         // pixel on
   u8g.setFont(u8g_font_6x10r);
+  
+  if (Params[13] == 1)
+  {
+    u8g.setRot180();
+    //revert screen
+  }else if (Params[13] == 0)
+  {
+    u8g.undoRotation();
+    //Clear screen revers
+  }
 
-  EELoad(13);
+ 
 
   //reading EEProm start values
   //for (address = 0; address<13; address++)
@@ -352,13 +368,13 @@ void loop(void) {
   //включение-выключение нагрузки
   if (Params[9] == 1)
   {
-    digitalWrite(HeaterPin, HIGH);
-    digitalWrite(LoadShowPin, HIGH);
+    digitalWrite(HeaterPin, LOW);
+    digitalWrite(LoadShowPin, LOW);
   }
   if (Params[9] == 0)
   {
-    digitalWrite(HeaterPin, LOW);
-    digitalWrite(LoadShowPin, LOW);
+    digitalWrite(HeaterPin, HIGH);
+    digitalWrite(LoadShowPin, HIGH);
   }
   //конец включение-выключение нагрузки
 
@@ -488,7 +504,7 @@ void loop(void) {
       case 0xFF38C7://5 save to EEprom
         {
           Params[0] = 0;
-          EESave(13);
+          EESave(ParamCount);
           break;
         }
 
@@ -710,6 +726,7 @@ void draw(void) {
   }
 
 }
+
 void EESave(int NumOfChar) {
   for (address = 0; address < NumOfChar; address++)
   {
@@ -727,3 +744,4 @@ void EELoad(int NumOfChar) {
     //Params[aac] = EEPROM.read(aac);
   }
 }
+
