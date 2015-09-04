@@ -1,7 +1,5 @@
 #include <SPI.h>
 #include <Wire.h>
-//#include <Adafruit_GFX.h> //to many memoru used!
-//#include <Adafruit_SSD1306.h>
 #include <U8glib.h>
 #include <OneWire.h>
 #include <IRremote.h>
@@ -12,19 +10,16 @@
 
 #define Clock
 #define TempGraph
-//#define StartXGraph 50
 #define logsize 50
-//#define Params[12] 1 //secs
+//see Params[12] - secs between graph points
 //30 sec*45 pos = 22 min
 //240 sec*45 pos = 3 hour
-//#define BigTemp
-//#define LoopGraph
-//#define LineGraph
-#define HeaterPin 11
+
+#define HeaterPin 11 //must used for reversed load control (if pin LOW load ON)
 #define LoadShowPin 13
-#define LoadRelaxPin 12
+#define LoadRelaxPin 12 //must used for direct load control (if pin HIGH load ON)
 #define IR_Keys
-//#define Nokia_Frame
+//#define Nokia_Frame //temporary frame for debug on bigger screen
 
 U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE | U8G_I2C_OPT_DEV_0); // I2C / TWI
 
@@ -106,19 +101,7 @@ const uint8_t BMP_GoodTemp[] U8G_PROGMEM = {
 
 
 };
-
-
-
-
 //end of bitmap images
-//#define OLED_RESET 4
-//Adafruit_SSD1306 display(OLED_RESET);
-
-#define NUMFLAKES 10
-#define XPOS 0
-#define YPOS 1
-#define DELTAY 2
-
 
 // OneWire DS18S20, DS18B20, DS1822 Temperature Example
 //
@@ -128,17 +111,11 @@ const uint8_t BMP_GoodTemp[] U8G_PROGMEM = {
 
 // http://milesburton.com/Dallas_Temperature_Control_Library
 
-OneWire  ds(10);  // on pin 10 (a 4.7K resistor is necessary)
-
 int RECEIVE_PIN = 7;
-IRrecv irrecv(RECEIVE_PIN);
-decode_results results;
 int a, b, c, d;
-
-
+char DSNum = 3;//todo: need be tasted
+char RTCNum = 3;//todo: need be tasted 0-ok 1-stopped 2-unreadeble
 int address = 0; //for EEProm
-
-
 char TempLogIndex, TimeLogCounter = 0, TimeLogPosition;
 signed int TempLog[logsize];
 char StartXGraph;
@@ -148,6 +125,11 @@ char aab;
 //char GraphTop  = 40; //ToDo: написать изменение настройки - пока жестко фиксируется
 //char TimeLogPosition;
 float celsius;
+
+OneWire  ds(10);  // on pin 10 (a 4.7K resistor is necessary)
+IRrecv irrecv(RECEIVE_PIN);
+decode_results results;
+
 #define ParamCount 15
 char Params[ParamCount] =
 { 0, 0,
@@ -155,7 +137,7 @@ char Params[ParamCount] =
   31, 29, 1, //термостат
   0,//нагрузка
   1, 1,
-  5,1,ParamCount
+  5, 1, ParamCount
   // 0-menu pos,1-признак меню,
   //2-тип графика,3-высота графика,4-максимум графика,5-минимум графика,
   //6-выключение термостата,7-включение термостата,8-темостат используется?,
@@ -163,60 +145,58 @@ char Params[ParamCount] =
   //,10-показывать пределы термостатирования,11-показывать перделы графика
   //12 - LogTime(сек),13 screen revers,paramcount
 };
-const char * const MenuParamsName[] PROGMEM = {" nop", " nop1", "GType", "GHeight", "GMax", "Gmin", "T Off", "T ON", "TInUse", "LoadOn", "Sh T", "Sh G", "LogSec","SCR revers","ParamCount","@EOM"};
-
+const char * const MenuParamsName[] PROGMEM = {" nop", " nop1", "GType", "GHeight", "GMax", "Gmin", "T Off", "T ON", "TInUse", "LoadOn", "Sh T", "Sh G", "LogSec", "SCR revers", "ParamCount", "@EOM"};
+const char * const DSType[] PROGMEM = {"DS18S20","DS18B20","DS1820","BAD temp sensor"}; //temp sensor type
 
 void setup(void) {
+/*
   //pin setup for ds18b20 - power from 8 pin
   pinMode(8, OUTPUT);
   digitalWrite(8, HIGH);
-
+*/
   /*
   //pin setup for irreciver - power from d5 pin gnd - d6 amd siglai is d7 pin
   pinMode(5, OUTPUT);
   digitalWrite(5, HIGH);
   pinMode(6, OUTPUT);
   digitalWrite(6, LOW);
-*/
+  */
   //heater
   pinMode(HeaterPin, OUTPUT);
   pinMode(LoadShowPin, OUTPUT);
-   pinMode(LoadRelaxPin, OUTPUT);
+  pinMode(LoadRelaxPin, OUTPUT);
   digitalWrite(HeaterPin, LOW);
   digitalWrite(LoadShowPin, LOW);
- digitalWrite(LoadShowPin, HIGH);
+  digitalWrite(LoadRelaxPin, HIGH);
 
- EELoad(ParamCount);
+  EELoad(ParamCount); //load settings from eeprom
 
   //U8glib setup
   u8g.setColorIndex(1);         // pixel on
   u8g.setFont(u8g_font_6x10r);
-  
-  if (Params[13] == 1)
+
+  if (Params[13] == 1) //screen rotation work only after reset
   {
     u8g.setRot180();
     //revert screen
-  }else if (Params[13] == 0)
+  } else if (Params[13] == 0)
   {
     u8g.undoRotation();
     //Clear screen revers
   }
 
- 
+StartXGraph = u8g.getWidth() - logsize - 2;//start position calculate once. logsize is defined value and can not be changed //TODO:do logsize changeble after reset or possible work only with graph end part
 
-  //reading EEProm start values
-  //for (address = 0; address<13; address++)
-  //{
-  //Params[address] = EEPROM.read(address);
-  //delay(50);
-  //}
   //Serial.begin(9600);
   irrecv.enableIRIn();
 
-  StartXGraph = u8g.getWidth() - logsize - 2;
+  
 }
+
 tmElements_t tm;
+
 void loop(void) {
+
   u8g.firstPage();
 
   byte i;
@@ -234,7 +214,7 @@ void loop(void) {
     return;
   }
 
-  if (OneWire::crc8(addr, 7) != addr[7]) { //ToDo: добавить обработчик ошибок - вдруг градусник потерялся...
+  if (OneWire::crc8(addr, 7) != addr[7]) { //ToDo: добавить обработчик ошибок - вдруг градусник косячит...
     //Serial.println("CRC is not valid!");
     return;
   }
@@ -245,16 +225,20 @@ void loop(void) {
     case 0x10:
       //     Serial.println("  Chip = DS18S20");  // or old DS1820
       type_s = 1;
+      DSNum = 0;
       break;
     case 0x28:
       //     Serial.println("  Chip = DS18B20");
       type_s = 0;
+      DSNum = 1;
       break;
     case 0x22:
       //     Serial.println("  Chip = DS1822");
       type_s = 0;
+      DSNum = 2;
       break;
     default:
+    DSNum = 3;
       //     Serial.println("Device is not a DS18x20 family device.");
       return;
   }
@@ -266,13 +250,15 @@ void loop(void) {
 
 #ifdef Clock
   if (RTC.read(tm)) { //todo: нужно сделать настройку часов
-
+RTCNum = 0; //RTC ok
   } else {
     if (RTC.chipPresent()) {//todo: добавить исключение
+      RTCNum = 1;//stopped
       //      Serial.println("The DS1307 is stopped.  Please run the SetTime");
       //      Serial.println("example to initialize the time and begin running.");
       //      Serial.println();
     } else {
+      RTCNum = 2;//unreadeble
       //      Serial.println("DS1307 read error!  Please check the circuitry.");
       //      Serial.println();
     }
@@ -370,11 +356,14 @@ void loop(void) {
   {
     digitalWrite(HeaterPin, LOW);
     digitalWrite(LoadShowPin, LOW);
+    digitalWrite(LoadRelaxPin, HIGH);
   }
   if (Params[9] == 0)
   {
     digitalWrite(HeaterPin, HIGH);
     digitalWrite(LoadShowPin, HIGH);
+    digitalWrite(LoadRelaxPin, LOW);
+
   }
   //конец включение-выключение нагрузки
 
@@ -608,7 +597,9 @@ void draw(void) {
 #endif
 
     u8g.setPrintPos(4, 50);
-    u8g.print(Params[2], DEC);
+    //type_s = 2;
+    char * DSPrint = (char *) pgm_read_word (&DSType[DSNum]);
+    u8g.print(DSPrint);
     //кольцевой график темпиратуры
     if (Params[2] == 1) {
       for (aab = 0; aab < logsize ; aab++)
@@ -694,12 +685,12 @@ void draw(void) {
 
     }
     //конец кольцевой график
-    if ((Params[8] == 1 )&&(Params[10] == 1 ) )
+    if ((Params[8] == 1 ) && (Params[10] == 1 ) )
     {
       //Params[*] 6-выключение термостата,7-включение термостата,8-темостат используется?,
       //10-показывать пределы термостатирования,
       //printing termostat zone
-      u8g.setPrintPos(4, 24); 
+      u8g.setPrintPos(4, 24);
       u8g.print(Params[6], DEC);
       u8g.print (">T>");
       u8g.print(Params[7], DEC);
