@@ -113,8 +113,8 @@ const uint8_t BMP_GoodTemp[] U8G_PROGMEM = {
 
 int RECEIVE_PIN = 7;
 int a, b, c, d;
-char DSNum = 3;//todo: need be tasted
-char RTCNum = 3;//todo: need be tasted 0-ok 1-stopped 2-unreadeble
+char DSNum = 3;//todo: need be tasted //use with const char * const DSType[]
+char RTCNum = 3;//todo: need be tasted //0-ok 1-stopped 2-unreadeble
 int address = 0; //for EEProm
 char TempLogIndex, TimeLogCounter = 0, TimeLogPosition;
 signed int TempLog[logsize];
