@@ -55,8 +55,31 @@ int main(void)
 	Pot0DDR = ~_BV(Pot0PinNumPinNum); //Drocel pot attached //in
 	
 
-StartSetup();
+ISR (TIMER2_OVF_vect)
+{
 	
+}
+ISR (ADC_vect)
+{
+if (ADMUX == 0x00100000); 
+	{
+		TODO: GET ADC DATA
+		ADMUX = 0x00100001;    //(aref, only adch byte used, ch1 used) 
+	}else 
+	{
+		TODO: GET ADC DATA
+		ADMUX = 0x00100000;   //(aref, only adch byte used, ch0 used) 
+	}
+//ADMUX = 0x00100001;    //(aref, only adch byte used, ch1 used) 
+
+//value = value + (ADC*11/4); // Суммируем старое и новое значения АЦП, преобразуем
+//adc_counter++; // Увеличиваем счетчик измерений
+//перезапускаем АДЦ
+ADCSRA |=(1<<ADSC); //silgle ADC convert start,
+}	
+
+
+StartSetup();	
     while(1)
     {
         //TODO:: Please write your application code 
@@ -73,5 +96,7 @@ void ADCSetup(void)
 						//ADC in flag(HW set)
 						//ADC int enabled,
 						//speed /64(250khz) adps2:0 110 )
+						
+//SREG |= 						
 	  ADCSRA |=(1<<ADSC); //silgle ADC convert start,
 }
