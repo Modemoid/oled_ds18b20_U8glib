@@ -8,6 +8,7 @@
 
 
 #define F_CPU 16000000UL //16mhz
+#define Bdate __TIMESTAMP__
 
 #define Ing0DDR DDRB
 #define Ing0PORT PORTB
@@ -20,10 +21,38 @@
 #define Ing1PinNum 5 //Arduino led attached
 
 
+//-----------------------------------------------------------Drocel
+//* here you must select drocel type. 
+//* now supported only mechanical drocel with Resistor feedback, attached to ADC
+
+#define DrocelM  //if Drocel mechanics and use ADC
+//#define DrocelE  //if drocel use modeling servo.
+
+#ifndef DrocelM
+#ifndef DrocelE
+#error Bad definer Drocel type No type defined
+#endif
+#endif
+
+#ifdef DrocelM 
+#ifdef DrocelE
+#error Bad definer Drocel type You must select one drocel type
+#endif
+#endif
+
+#ifdef DrocelM
 #define PotDrocelDDR DDRC 
 #define PotDrocelPORT PORTC
 #define PotDrocelPIN PINC
 #define PotDrocelPinNum 0 //Drocel pot attached
+#endif
+
+#ifdef DrocelE
+#error Bad definer Drocel You must wright this code
+#endif
+//end -----------------------------------------------------------Drocel
+
+
 
 #define Pot0DDR DDRC
 #define Pot0PORT PORTC
@@ -36,12 +65,8 @@
 #define IgiPIN PIND
 #define IgiPinNum 2 //int0
 
-
-
-
 #include <avr/io.h>
 #include <avr/interrupt.h>
-
 
 
 ISR (TIMER2_OVF_vect)
@@ -73,7 +98,7 @@ ISR (ADC_vect)
 
 int main(void)
 {
-	
+
 	//DDRB = 0xff //all B is out
 	//DDRB = 0x00 //all B is in
 	//PORTD |= _BV(PD3);      // установить "1" на линии 3 порта D
