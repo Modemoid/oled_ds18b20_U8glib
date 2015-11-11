@@ -1,0 +1,152 @@
+
+IngectorControl.elf:     file format elf32-avr
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .text         00000090  00000000  00000000  00000054  2**1
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .comment      00000030  00000000  00000000  000000e4  2**0
+                  CONTENTS, READONLY
+  2 .debug_aranges 00000038  00000000  00000000  00000114  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  3 .debug_info   000000c9  00000000  00000000  0000014c  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  4 .debug_abbrev 00000083  00000000  00000000  00000215  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  5 .debug_line   000000f1  00000000  00000000  00000298  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  6 .debug_frame  00000070  00000000  00000000  0000038c  2**2
+                  CONTENTS, READONLY, DEBUGGING
+  7 .debug_str    0000016a  00000000  00000000  000003fc  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  8 .debug_loc    0000006b  00000000  00000000  00000566  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  9 .debug_ranges 00000028  00000000  00000000  000005d1  2**0
+                  CONTENTS, READONLY, DEBUGGING
+
+Disassembly of section .text:
+
+00000000 <__vectors>:
+   0:	12 c0       	rjmp	.+36     	; 0x26 <__ctors_end>
+   2:	19 c0       	rjmp	.+50     	; 0x36 <__bad_interrupt>
+   4:	18 c0       	rjmp	.+48     	; 0x36 <__bad_interrupt>
+   6:	17 c0       	rjmp	.+46     	; 0x36 <__bad_interrupt>
+   8:	17 c0       	rjmp	.+46     	; 0x38 <__vector_4>
+   a:	15 c0       	rjmp	.+42     	; 0x36 <__bad_interrupt>
+   c:	14 c0       	rjmp	.+40     	; 0x36 <__bad_interrupt>
+   e:	13 c0       	rjmp	.+38     	; 0x36 <__bad_interrupt>
+  10:	12 c0       	rjmp	.+36     	; 0x36 <__bad_interrupt>
+  12:	11 c0       	rjmp	.+34     	; 0x36 <__bad_interrupt>
+  14:	10 c0       	rjmp	.+32     	; 0x36 <__bad_interrupt>
+  16:	0f c0       	rjmp	.+30     	; 0x36 <__bad_interrupt>
+  18:	0e c0       	rjmp	.+28     	; 0x36 <__bad_interrupt>
+  1a:	0d c0       	rjmp	.+26     	; 0x36 <__bad_interrupt>
+  1c:	17 c0       	rjmp	.+46     	; 0x4c <__vector_14>
+  1e:	0b c0       	rjmp	.+22     	; 0x36 <__bad_interrupt>
+  20:	0a c0       	rjmp	.+20     	; 0x36 <__bad_interrupt>
+  22:	09 c0       	rjmp	.+18     	; 0x36 <__bad_interrupt>
+  24:	08 c0       	rjmp	.+16     	; 0x36 <__bad_interrupt>
+
+00000026 <__ctors_end>:
+  26:	11 24       	eor	r1, r1
+  28:	1f be       	out	0x3f, r1	; 63
+  2a:	cf e5       	ldi	r28, 0x5F	; 95
+  2c:	d4 e0       	ldi	r29, 0x04	; 4
+  2e:	de bf       	out	0x3e, r29	; 62
+  30:	cd bf       	out	0x3d, r28	; 61
+  32:	21 d0       	rcall	.+66     	; 0x76 <main>
+  34:	2b c0       	rjmp	.+86     	; 0x8c <_exit>
+
+00000036 <__bad_interrupt>:
+  36:	e4 cf       	rjmp	.-56     	; 0x0 <__vectors>
+
+00000038 <__vector_4>:
+#include <avr/interrupt.h>
+
+
+
+ISR (TIMER2_OVF_vect)
+{
+  38:	1f 92       	push	r1
+  3a:	0f 92       	push	r0
+  3c:	0f b6       	in	r0, 0x3f	; 63
+  3e:	0f 92       	push	r0
+  40:	11 24       	eor	r1, r1
+	
+}
+  42:	0f 90       	pop	r0
+  44:	0f be       	out	0x3f, r0	; 63
+  46:	0f 90       	pop	r0
+  48:	1f 90       	pop	r1
+  4a:	18 95       	reti
+
+0000004c <__vector_14>:
+ISR (ADC_vect)
+{
+  4c:	1f 92       	push	r1
+  4e:	0f 92       	push	r0
+  50:	0f b6       	in	r0, 0x3f	; 63
+  52:	0f 92       	push	r0
+  54:	11 24       	eor	r1, r1
+  56:	8f 93       	push	r24
+	if (ADMUX == 0b00100000)
+  58:	87 b1       	in	r24, 0x07	; 7
+  5a:	80 32       	cpi	r24, 0x20	; 32
+  5c:	19 f4       	brne	.+6      	; 0x64 <__vector_14+0x18>
+	{
+		//TODO: GET ADC DATA
+		ADMUX = 0b00100001;    //(aref, only adch byte used, ch1 used)
+  5e:	81 e2       	ldi	r24, 0x21	; 33
+  60:	87 b9       	out	0x07, r24	; 7
+  62:	02 c0       	rjmp	.+4      	; 0x68 <__vector_14+0x1c>
+	}
+	else
+	{
+		//TODO: GET ADC DATA
+		ADMUX = 0b00100000;   //(aref, only adch byte used, ch0 used)
+  64:	80 e2       	ldi	r24, 0x20	; 32
+  66:	87 b9       	out	0x07, r24	; 7
+	//ADMUX = 0x00100001;    //(aref, only adch byte used, ch1 used)
+
+	//value = value + (ADC*11/4); // Суммируем старое и новое значения АЦП, преобразуем
+	//adc_counter++; // Увеличиваем счетчик измерений
+	//перезапускаем АДЦ
+	ADCSRA |=(1<<ADSC); //silgle ADC convert start,
+  68:	36 9a       	sbi	0x06, 6	; 6
+}
+  6a:	8f 91       	pop	r24
+  6c:	0f 90       	pop	r0
+  6e:	0f be       	out	0x3f, r0	; 63
+  70:	0f 90       	pop	r0
+  72:	1f 90       	pop	r1
+  74:	18 95       	reti
+
+00000076 <main>:
+	//DDRB = 0xff //all B is out
+	//DDRB = 0x00 //all B is in
+	//PORTD |= _BV(PD3);      // установить "1" на линии 3 порта D
+	//PORTD &= ~_BV(PD4);      // установить "0" на линии 4 порта D
+	
+	Ing0DDR  = _BV(Ing0PinNum);//ingector //out
+  76:	88 e0       	ldi	r24, 0x08	; 8
+  78:	87 bb       	out	0x17, r24	; 23
+	Ing0DDR  = _BV(Ing1PinNum);// arduino led //out 
+  7a:	80 e2       	ldi	r24, 0x20	; 32
+  7c:	87 bb       	out	0x17, r24	; 23
+	
+	IgiDDR = ~_BV(IgiPinNum); //igition sensor //in
+  7e:	8b ef       	ldi	r24, 0xFB	; 251
+  80:	81 bb       	out	0x11, r24	; 17
+	PotDrocelDDR = ~_BV(PotDrocelPinNum); //Drocel pot attached //in
+  82:	8e ef       	ldi	r24, 0xFE	; 254
+  84:	84 bb       	out	0x14, r24	; 20
+	Pot0DDR = ~_BV(Pot0PinNum); //Drocel pot attached //in
+  86:	8d ef       	ldi	r24, 0xFD	; 253
+  88:	84 bb       	out	0x14, r24	; 20
+  8a:	ff cf       	rjmp	.-2      	; 0x8a <main+0x14>
+
+0000008c <_exit>:
+  8c:	f8 94       	cli
+
+0000008e <__stop_program>:
+  8e:	ff cf       	rjmp	.-2      	; 0x8e <__stop_program>

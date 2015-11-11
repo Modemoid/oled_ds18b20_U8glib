@@ -1,9 +1,11 @@
 /*
- * IngControl.c
+ * IngectorControl.c
  *
- * Created: 20.10.2015 9:10:36
+ * Created: 11.11.2015 12:07:02
  *  Author: kartsev_pv
+ * Project for Atmega8(A/L) CPU
  */ 
+
 
 #define F_CPU 16000000UL //16mhz
 
@@ -48,14 +50,15 @@ ISR (TIMER2_OVF_vect)
 }
 ISR (ADC_vect)
 {
-	if (ADMUX == 0x00100000);
+	if (ADMUX == 0b00100000)
 	{
 		//TODO: GET ADC DATA
-		ADMUX = 0x00100001;    //(aref, only adch byte used, ch1 used)
-	}else
+		ADMUX = 0b00100001;    //(aref, only adch byte used, ch1 used)
+	}
+	else
 	{
 		//TODO: GET ADC DATA
-		ADMUX = 0x00100000;   //(aref, only adch byte used, ch0 used)
+		ADMUX = 0b00100000;   //(aref, only adch byte used, ch0 used)
 	}
 	//ADMUX = 0x00100001;    //(aref, only adch byte used, ch1 used)
 
@@ -64,7 +67,6 @@ ISR (ADC_vect)
 	//перезапускаем АДЦ
 	ADCSRA |=(1<<ADSC); //silgle ADC convert start,
 }
-
 
 
 
@@ -87,7 +89,7 @@ int main(void)
 
 
 
-StartSetup();	
+//StartSetup();	
     while(1)
     {
         //TODO:: Please write your application code 
@@ -95,10 +97,10 @@ StartSetup();
 }
 void ADCSetup(void)
 {
-	ADMUX = 0x00100000;    //(aref, only adch byte used, ch0 used) 
-	//ADMUX = 0x00100001;    //(aref, only adch byte used, ch1 used) 
+	ADMUX = 0b00100000;    //(aref, only adch byte used, ch0 used) 
+	//ADMUX = 0b00100001;    //(aref, only adch byte used, ch1 used) 
 	
-	ADCSR = 0x10001110; //(ADC EN,
+	ADCSRA = 0b10001110; //(ADC EN,
 						//silgle ADC convert NOT start,
 						//ADC free run OFF,
 						//ADC in flag(HW set)
