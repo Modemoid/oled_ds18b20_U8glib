@@ -3,7 +3,8 @@
  *
  * Created: 11.11.2015 12:07:02
  *  Author: kartsev_pv
- * Project for Atmega8(A/L) CPU
+ * Project for Atmega8(A/L) CPU 
+ * U can use arduino nano with special shield 
  */ 
 
 
@@ -18,7 +19,8 @@
 #define Ing1DDR DDRB
 #define Ing1PORT PORTB
 #define Ing1PIN PINB
-#define Ing1PinNum 5 //Arduino led attached
+#define Ing1PinNum 5 //Arduino nano led attached  
+//this section added for arduino shield. @ PCB may be not used. 
 
 
 //-----------------------------------------------------------Drocel
@@ -33,6 +35,7 @@
 #error Bad definer Drocel type No type defined
 #endif
 #endif
+
 
 #ifdef DrocelM 
 #ifdef DrocelE
@@ -69,21 +72,31 @@
 #include <avr/interrupt.h>
 
 
+/////////////////////////global variable section
+
+char ADch0 = 0xFF,ADch1 = 0xFF; //used for ADC result. 
+
+/////////////////////////end global variable section
+
+
+
 ISR (TIMER2_OVF_vect)
 {
 	
 }
 ISR (ADC_vect)
 {
-	if (ADMUX == 0b00100000)
+	if (ADMUX == 0b01100000)
 	{
 		//TODO: GET ADC DATA
-		ADMUX = 0b00100001;    //(aref, only adch byte used, ch1 used)
+ADch0 = ADCH;
+		ADMUX = 0b01100001;    //(aref, only adch byte used, ch1 used)
 	}
 	else
 	{
 		//TODO: GET ADC DATA
-		ADMUX = 0b00100000;   //(aref, only adch byte used, ch0 used)
+		ADch1 = ADCH;
+		ADMUX = 0b01100000;   //(aref, only adch byte used, ch0 used)
 	}
 	//ADMUX = 0x00100001;    //(aref, only adch byte used, ch1 used)
 
@@ -111,8 +124,8 @@ int main(void)
 	PotDrocelDDR = ~_BV(PotDrocelPinNum); //Drocel pot attached //in
 	Pot0DDR = ~_BV(Pot0PinNum); //Drocel pot attached //in
 	
-
-
+ADCSetup();
+sei();
 
 //StartSetup();	
     while(1)
@@ -122,7 +135,7 @@ int main(void)
 }
 void ADCSetup(void)
 {
-	ADMUX = 0b00100000;    //(aref, only adch byte used, ch0 used) 
+	ADMUX = 0b01100000;    //(aref, only adch byte used, ch0 used) 
 	//ADMUX = 0b00100001;    //(aref, only adch byte used, ch1 used) 
 	
 	ADCSRA = 0b10001110; //(ADC EN,
