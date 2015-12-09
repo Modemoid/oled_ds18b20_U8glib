@@ -47,10 +47,17 @@ U8GLIB_PCD8544 u8g(12, 11, 10, 9, 8);		// SPI Com: SCK = 13, MOSI = 11, CS = 10,
 
 int sensorPin = A0;    // select the input pin for the potentiometer
 int sensorValue = 0;  // variable to store the value coming from the sensor
+int PowerPin = A1;
+int PowerValue = 0;
+int sensorLat = 0;
+int PowerLat = 0;
+char latency = 0;
+#define Latcount 10
 int DrawH = 0;
 char HBarW = 10;
-int FuelStart = 70, FuelEnd = 270; //ADC offset for fuel LVL sevsor
+int FuelStart = 70, FuelEnd = 950; //ADC offset for fuel LVL sevsor
 char FuelLVLProcent = 0;
+char LbarH = 0;
 void u8g_prepare(void) {
   // u8g.setFont(u8g_font_6x10);
   //u8g.setFont(u8g_font_04b_24n);
@@ -62,7 +69,7 @@ void u8g_prepare(void) {
 
 void u8g_box_frame(uint8_t a) {
   //  u8g.drawStr( 0, 0, "drawBox");
-  char buf[5];
+  char buf[8];
   char heightLCD, widthLCD;
 
   heightLCD = u8g.getHeight(); //высота
@@ -70,7 +77,7 @@ void u8g_box_frame(uint8_t a) {
 #define ADC_debug
 #ifdef ADC_debug
   //u8g.drawFrame(0,0,84,48);nokia 5110 lcd frame
-  sprintf (buf, "%d", sensorValue);
+  sprintf (buf, "a0=%d", sensorValue);
   u8g.drawStr(widthLCD / 2 - 10, 0, buf);
 #endif
   // fuel LVL
@@ -81,6 +88,10 @@ void u8g_box_frame(uint8_t a) {
   u8g.drawFrame(widthLCD - HBarW , 0, HBarW, heightLCD - DrawH);
   u8g.drawBox(widthLCD - HBarW , heightLCD - DrawH, HBarW, heightLCD);
   //end fuel LVL
+  //left bar
+  u8g.drawFrame(0 , 0, HBarW, heightLCD - LbarH );
+  u8g.drawBox(0, heightLCD - LbarH, HBarW, heightLCD);
+  //end of Left bar
 
   //u8g.drawStr(8, 8, "1qwertyuiop");
   //u8g.drawFrame(75,1,83,48-DrawH);
@@ -88,8 +99,12 @@ void u8g_box_frame(uint8_t a) {
   //u8g.drawStr( 0, 30, "drawFrame");
   //u8g.drawFrame(5,10+30,20,10);
   //u8g.drawFrame(10+a,15+30,30,7);
-
-
+  //
+  //Raw a1 out
+#ifdef ADC_debug
+  sprintf (buf, "a1=%d", PowerValue);
+  u8g.drawStr(widthLCD / 2 - 10, 10, buf);
+#endif
   //sensorValue
 }
 
@@ -202,14 +217,14 @@ void draw(void) {
   u8g_prepare();
   switch (draw_state >> 3) {
     case 0: u8g_box_frame(draw_state & 7); break;
-    case 1: u8g_disc_circle(draw_state & 7); break;
-    case 2: u8g_r_frame(draw_state & 7); break;
-    case 3: u8g_string(draw_state & 7); break;
-    case 4: u8g_line(draw_state & 7); break;
-    case 5: u8g_triangle(draw_state & 7); break;
-    case 6: u8g_ascii_1(); break;
-    case 7: u8g_ascii_2(); break;
-    case 8: u8g_extra_page(draw_state & 7); break;
+      //case 1: u8g_disc_circle(draw_state & 7); break;
+      //case 2: u8g_r_frame(draw_state & 7); break;
+      //case 3: u8g_string(draw_state & 7); break;
+      //case 4: u8g_line(draw_state & 7); break;
+      //case 5: u8g_triangle(draw_state & 7); break;
+      //case 6: u8g_ascii_1(); break;
+      //case 7: u8g_ascii_2(); break;
+      //case 8: u8g_extra_page(draw_state & 7); break;
   }
 }
 
@@ -244,10 +259,32 @@ void loop(void) {
   //   draw_state = 0;
   //delay(500);
   // rebuild the picture after some delay
-  delay(300);
-  sensorValue = analogRead(sensorPin);
-  DrawH = map(sensorValue, FuelStart, FuelEnd, 0, 48);
-  FuelLVLProcent = map(sensorValue, FuelStart, FuelEnd, 0, 100);
+
+  delay(100);
+  if (latency < Latcount)
+  {
+    latency++;
+    sensorLat = sensorLat + analogRead(sensorPin);
+    PowerLat = PowerLat + analogRead(PowerPin);
+  } else
+  {
+    latency = 0;
+    DrawH = map(sensorLat, FuelStart * Latcount, FuelEnd * Latcount, 1, 47);
+    FuelLVLProcent = map(sensorLat, FuelStart * Latcount, FuelEnd * Latcount, 0, 100);
+    sensorValue = sensorLat / Latcount;
+    sensorLat = 0;
+
+    PowerValue = PowerLat / Latcount;
+    PowerLat = 0;
+  }
+
+  if (LbarH < 48)
+  {
+    LbarH++ ;
+  } else
+  {
+    LbarH = 0;
+  }
 }
 
 
