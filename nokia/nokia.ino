@@ -1,39 +1,9 @@
 /*
 
-  GraphicsTest.pde
-
   >>> Before compiling: Please remove comment from the constructor of the
   >>> connected graphics display (see below).
 
   Universal 8bit Graphics Library, https://github.com/olikraus/u8glib/
-
-  Copyright (c) 2012, olikraus@gmail.com
-  All rights reserved.
-
-  Redistribution and use in source and binary forms, with or without modification,
-  are permitted provided that the following conditions are met:
-
-  * Redistributions of source code must retain the above copyright notice, this list
-    of conditions and the following disclaimer.
-
-  * Redistributions in binary form must reproduce the above copyright notice, this
-    list of conditions and the following disclaimer in the documentation and/or other
-    materials provided with the distribution.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-  CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
-  INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
-  CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 */
 
@@ -45,6 +15,10 @@
 // devices with all constructor calls is here: https://github.com/olikraus/u8glib/wiki/device
 U8GLIB_PCD8544 u8g(12, 11, 10, 9, 8);		// SPI Com: SCK = 13, MOSI = 11, CS = 10, A0 = 9, Reset = 8
 
+
+#define Latcount 10
+#define ADC_debug
+
 int sensorPin = A0;    // select the input pin for the potentiometer
 int sensorValue = 0;  // variable to store the value coming from the sensor
 int PowerPin = A1;
@@ -52,7 +26,6 @@ int PowerValue = 0;
 int sensorLat = 0;
 int PowerLat = 0;
 char latency = 0;
-#define Latcount 10
 int DrawH = 0;
 char HBarW = 10;
 int FuelStart = 70, FuelEnd = 950; //ADC offset for fuel LVL sevsor
@@ -74,7 +47,7 @@ void u8g_box_frame(uint8_t a) {
 
   heightLCD = u8g.getHeight(); //высота
   widthLCD = u8g.getWidth(); //ширина
-#define ADC_debug
+
 #ifdef ADC_debug
   //u8g.drawFrame(0,0,84,48);nokia 5110 lcd frame
   sprintf (buf, "a0=%d", sensorValue);
@@ -93,58 +66,14 @@ void u8g_box_frame(uint8_t a) {
   u8g.drawBox(0, heightLCD - LbarH, HBarW, heightLCD);
   //end of Left bar
 
-  //u8g.drawStr(8, 8, "1qwertyuiop");
-  //u8g.drawFrame(75,1,83,48-DrawH);
-  //u8g.drawBox(10+a,15,30,7);
-  //u8g.drawStr( 0, 30, "drawFrame");
-  //u8g.drawFrame(5,10+30,20,10);
-  //u8g.drawFrame(10+a,15+30,30,7);
-  //
-  //Raw a1 out
+
+
 #ifdef ADC_debug
+  //Raw a1 out
   sprintf (buf, "a1=%d", PowerValue);
   u8g.drawStr(widthLCD / 2 - 10, 10, buf);
 #endif
   //sensorValue
-}
-
-void u8g_disc_circle(uint8_t a) {
-  u8g.drawStr( 0, 0, "drawDisc");
-  u8g.drawDisc(10, 18, 9);
-  u8g.drawDisc(24 + a, 16, 7);
-  u8g.drawStr( 0, 30, "drawCircle");
-  u8g.drawCircle(10, 18 + 30, 9);
-  u8g.drawCircle(24 + a, 16 + 30, 7);
-}
-
-void u8g_r_frame(uint8_t a) {
-  u8g.drawStr( 0, 0, "drawRFrame/Box");
-  u8g.drawRFrame(5, 10, 40, 30, a + 1);
-  u8g.drawRBox(50, 10, 25, 40, a + 1);
-}
-
-void u8g_string(uint8_t a) {
-  u8g.drawStr(30 + a, 31, " 0");
-  u8g.drawStr90(30, 31 + a, " 90");
-  u8g.drawStr180(30 - a, 31, " 180");
-  u8g.drawStr270(30, 31 - a, " 270");
-}
-
-void u8g_line(uint8_t a) {
-  u8g.drawStr( 0, 0, "drawLine");
-  u8g.drawLine(7 + a, 10, 40, 55);
-  u8g.drawLine(7 + a * 2, 10, 60, 55);
-  u8g.drawLine(7 + a * 3, 10, 80, 55);
-  u8g.drawLine(7 + a * 4, 10, 100, 55);
-}
-
-void u8g_triangle(uint8_t a) {
-  uint16_t offset = a;
-  u8g.drawStr( 0, 0, "drawTriangle");
-  u8g.drawTriangle(14, 7, 45, 30, 10, 40);
-  u8g.drawTriangle(14 + offset, 7 - offset, 45 + offset, 30 - offset, 57 + offset, 10 - offset);
-  u8g.drawTriangle(57 + offset * 2, 10, 45 + offset * 2, 30, 86 + offset * 2, 53);
-  u8g.drawTriangle(10 + offset, 40 + offset, 45 + offset, 30 + offset, 86 + offset, 53 + offset);
 }
 
 void u8g_ascii_1() {
@@ -171,44 +100,6 @@ void u8g_ascii_2() {
   }
 }
 
-void u8g_extra_page(uint8_t a)
-{
-  if ( u8g.getMode() == U8G_MODE_HICOLOR || u8g.getMode() == U8G_MODE_R3G3B2) {
-    /* draw background (area is 128x128) */
-    u8g_uint_t r, g, b;
-    b = a << 5;
-    for ( g = 0; g < 64; g++ )
-    {
-      for ( r = 0; r < 64; r++ )
-      {
-        u8g.setRGB(r << 2, g << 2, b );
-        u8g.drawPixel(g, r);
-      }
-    }
-    u8g.setRGB(255, 255, 255);
-    u8g.drawStr( 66, 0, "Color Page");
-  }
-  else if ( u8g.getMode() == U8G_MODE_GRAY2BIT )
-  {
-    u8g.drawStr( 66, 0, "Gray Level");
-    u8g.setColorIndex(1);
-    u8g.drawBox(0, 4, 64, 32);
-    u8g.drawBox(70, 20, 4, 12);
-    u8g.setColorIndex(2);
-    u8g.drawBox(0 + 1 * a, 4 + 1 * a, 64 - 2 * a, 32 - 2 * a);
-    u8g.drawBox(74, 20, 4, 12);
-    u8g.setColorIndex(3);
-    u8g.drawBox(0 + 2 * a, 4 + 2 * a, 64 - 4 * a, 32 - 4 * a);
-    u8g.drawBox(78, 20, 4, 12);
-  }
-  else
-  {
-    u8g.drawStr( 0, 12, "setScale2x2");
-    u8g.setScale2x2();
-    u8g.drawStr( 0, 6 + a, "setScale2x2");
-    u8g.undoScale();
-  }
-}
 
 
 uint8_t draw_state = 0;
@@ -217,14 +108,9 @@ void draw(void) {
   u8g_prepare();
   switch (draw_state >> 3) {
     case 0: u8g_box_frame(draw_state & 7); break;
-      //case 1: u8g_disc_circle(draw_state & 7); break;
-      //case 2: u8g_r_frame(draw_state & 7); break;
-      //case 3: u8g_string(draw_state & 7); break;
-      //case 4: u8g_line(draw_state & 7); break;
-      //case 5: u8g_triangle(draw_state & 7); break;
       //case 6: u8g_ascii_1(); break;
       //case 7: u8g_ascii_2(); break;
-      //case 8: u8g_extra_page(draw_state & 7); break;
+
   }
 }
 
@@ -234,14 +120,12 @@ void setup(void) {
   // flip screen, if required
   //u8g.setRot180();
 
-
-#if defined(ARDUINO)
-  pinMode(13, OUTPUT);
+  pinMode(13, OUTPUT); //arduino led pin
   digitalWrite(13, HIGH);
 
-  pinMode(3, OUTPUT);
+  pinMode(3, OUTPUT); //backlight
   analogWrite(3, 0);
-#endif
+
 
 }
 
