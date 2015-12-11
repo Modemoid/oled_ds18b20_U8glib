@@ -18,19 +18,116 @@ U8GLIB_PCD8544 u8g(12, 11, 10, 9, 8);		// SPI Com: SCK = 13, MOSI = 11, CS = 10,
 
 #define Latcount 10
 #define ADC_debug
-
+#define Fuel_mark
+#define Fuel_Bar_mark
+#define HBarW 10
+#define Accum_mark
+#define acuOffsetW 0//по ширинеот левого бара 
+#define acuOffsetH -5 //по высоте от нижнего края
+#define HeadLight
 int sensorPin = A0;    // select the input pin for the potentiometer
 int sensorValue = 0;  // variable to store the value coming from the sensor
+int sensorLat = 0;
+
 int PowerPin = A1;
 int PowerValue = 0;
-int sensorLat = 0;
 int PowerLat = 0;
+
+int VoltPin = A2;
+int VoltValue = 0;
+int VoltLat = 0;
+
 char latency = 0;
 int DrawH = 0;
-char HBarW = 10;
 int FuelStart = 70, FuelEnd = 950; //ADC offset for fuel LVL sevsor
 char FuelLVLProcent = 0;
 char LbarH = 0;
+
+//bitmap
+#ifdef Fuel_mark
+const uint8_t fuel_bitmap[] PROGMEM = {
+  0b00000000,
+  0b01111100,
+  0b01000110,
+  0b01000110,
+  0b01111100,
+  0b01111100,
+  0b01111100,
+  0b00000000
+};
+#endif
+
+#ifdef Accum_mark
+const uint8_t accum_bitmap[] PROGMEM = {
+  0b00011100, 0b00111000,
+  0b01110111, 0b11101110,
+  0b01000000, 0b00000010,
+  0b01001000, 0b00000010,
+  0b01011100, 0b00111010,
+  0b01001000, 0b00000010,
+  0b01000000, 0b00000010,
+  0b01111111, 0b11111110
+};
+#endif
+#ifdef HeadLight
+const uint8_t hibeam_bitmap[] PROGMEM = {
+0b00001000,
+0b00111000,
+0b01101111,
+0b10001000,
+0b10001111,
+0b10001000,
+0b01101111,
+0b00111000,
+0b00001000
+};
+const uint8_t lobeam_bitmap[] PROGMEM = {
+0b00001000,
+0b00111000,
+0b01111100,
+0b11001010,
+0b10001001,
+0b11001100,
+0b01111010,
+0b00111001,
+0b00001000
+};
+#endif
+const uint8_t rArr_bitmap[] PROGMEM = {
+0b00001000,
+0b00001100,
+0b01111110,
+0b01111111,
+0b01111110,
+0b00001100,
+0b00001000
+};
+const uint8_t lArr_bitmap[] PROGMEM = {
+0b00010000,
+0b00110000,
+0b01111110,
+0b11111110,
+0b01111110,
+0b00110000,
+0b00010000
+};
+const uint8_t chkeng_bitmap[] PROGMEM = {
+0b00000111,0b11000000,
+0b00000001,0b00000000,
+0b00011111,0b11100000,
+0b00100000,0b00010000,
+0b00100001,0b00010111,
+0b10100001,0b00011101,
+0b11100001,0b00000001,
+0b10100000,0b00011101,
+0b00110001,0b00010111,
+0b00001000,0b00010000,
+0b00000111,0b11100000
+};
+
+//end bitmap
+
+
 void u8g_prepare(void) {
   // u8g.setFont(u8g_font_6x10);
   //u8g.setFont(u8g_font_04b_24n);
@@ -57,10 +154,70 @@ void u8g_box_frame(uint8_t a) {
   // xx% near bar
   sprintf (buf, "%d%%", FuelLVLProcent);
   u8g.drawStr(widthLCD - HBarW - 16, heightLCD - 8 , buf);
+  //end  xx% near bar
   //bar
   u8g.drawFrame(widthLCD - HBarW , 0, HBarW, heightLCD - DrawH);
   u8g.drawBox(widthLCD - HBarW , heightLCD - DrawH, HBarW, heightLCD);
+#ifdef Fuel_Bar_mark
+  //bar mark
+  u8g.drawPixel(widthLCD - HBarW - 1, heightLCD / 2);
+  u8g.drawPixel(widthLCD - HBarW - 2, heightLCD / 2);
+
+  u8g.drawPixel(widthLCD - HBarW + 1, heightLCD / 2);
+  u8g.drawPixel(widthLCD - HBarW + 3, heightLCD / 2);
+  u8g.drawPixel(widthLCD - HBarW + 5, heightLCD / 2);
+
+  u8g.drawPixel(widthLCD - HBarW - 1, heightLCD / 4);
+  u8g.drawPixel(widthLCD - HBarW + 1, heightLCD / 4);
+  u8g.drawPixel(widthLCD - HBarW + 3, heightLCD / 4);
+  u8g.drawPixel(widthLCD - HBarW + 5, heightLCD / 4);
+
+  u8g.drawPixel(widthLCD - HBarW - 1, (heightLCD / 4) * 3);
+  u8g.drawPixel(widthLCD - HBarW + 1, (heightLCD / 4) * 3);
+  u8g.drawPixel(widthLCD - HBarW + 3, (heightLCD / 4) * 3);
+  u8g.drawPixel(widthLCD - HBarW + 5, (heightLCD / 4) * 3);
+
+  u8g.setColorIndex(0);
+  u8g.drawPixel(widthLCD - HBarW, heightLCD / 2);
+  u8g.drawPixel(widthLCD - HBarW + 2, heightLCD / 2);
+  u8g.drawPixel(widthLCD - HBarW + 4, heightLCD / 2);
+
+  u8g.drawPixel(widthLCD - HBarW, heightLCD / 4);
+  u8g.drawPixel(widthLCD - HBarW + 2, heightLCD / 4);
+  u8g.drawPixel(widthLCD - HBarW + 4, heightLCD / 4);
+
+  u8g.drawPixel(widthLCD - HBarW, (heightLCD / 4) * 3);
+  u8g.drawPixel(widthLCD - HBarW + 2, (heightLCD / 4) * 3);
+  u8g.drawPixel(widthLCD - HBarW + 4, (heightLCD / 4) * 3);
+
+  u8g.setColorIndex(1);
+  //end bar mark
+#endif
+  //end bar
+#ifdef Fuel_mark
+  u8g.setColorIndex(0);
+  u8g.drawBitmapP( widthLCD - 9, heightLCD - 8, 1, 8, fuel_bitmap);
+  u8g.setColorIndex(1);
+#endif
   //end fuel LVL
+
+#ifdef Accum_mark
+  u8g.drawBitmapP(HBarW + 1 + acuOffsetW, heightLCD - 8 + acuOffsetH, 2, 8, accum_bitmap);
+  sprintf (buf, "%d.%dV", VoltValue / 10, VoltValue % 10);
+  u8g.drawStr(HBarW + 18+ acuOffsetW, heightLCD - 8 + acuOffsetH, buf);
+
+#endif
+#ifdef HeadLight
+u8g.drawBitmapP( HBarW+2, heightLCD/2, 1, 9, lobeam_bitmap);
+u8g.drawBitmapP( HBarW+2+9, heightLCD/2, 1, 9, hibeam_bitmap);
+
+u8g.drawBitmapP( HBarW+2+18, heightLCD/2, 1, 7, lArr_bitmap);
+u8g.drawBitmapP( HBarW+2+27, heightLCD/2, 1, 7, rArr_bitmap);
+u8g.drawBitmapP( HBarW+2+36, heightLCD/2, 2, 11, chkeng_bitmap);
+
+
+#endif
+
   //left bar
   u8g.drawFrame(0 , 0, HBarW, heightLCD - LbarH );
   u8g.drawBox(0, heightLCD - LbarH, HBarW, heightLCD);
@@ -124,7 +281,7 @@ void setup(void) {
   digitalWrite(13, HIGH);
 
   pinMode(3, OUTPUT); //backlight
-  analogWrite(3, 0);
+  analogWrite(3, 50);
 
 
 }
@@ -150,6 +307,8 @@ void loop(void) {
     latency++;
     sensorLat = sensorLat + analogRead(sensorPin);
     PowerLat = PowerLat + analogRead(PowerPin);
+    VoltLat = VoltLat + analogRead(VoltPin);
+
   } else
   {
     latency = 0;
@@ -160,6 +319,11 @@ void loop(void) {
 
     PowerValue = PowerLat / Latcount;
     PowerLat = 0;
+
+    VoltValue = map(VoltLat / Latcount, 404, 978, 70, 170); //r1=100k r2=39k koff=3.56 7v=1.97(RAW=404) 17v=4.78(RAW=978)
+    //
+    //VoltValue = VoltLat / Latcount;
+    VoltLat = 0;
   }
 
   if (LbarH < 48)
