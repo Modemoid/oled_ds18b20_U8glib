@@ -1,0 +1,124 @@
+/*
+TinyDuino Compass Demo
+
+This example code is in the public domain.
+
+January 26, 2015 by Tony Batey
+
+https://tiny-circuits.com/
+
+*/
+#include <Wire.h>
+
+#define Addr 0x1E               // 7-bit address of HMC5883 compass
+
+void setup() {
+  Serial.begin(9600);
+  delay(100);                   // Power up delay
+  Wire.begin();
+  
+  // Set operating mode to continuous
+  Wire.beginTransmission(Addr); 
+  Wire.write(byte(0x02));
+  Wire.write(byte(0x00));
+  Wire.endTransmission();
+}
+int x_max=-10000;  // Starting values for hard iron calibration
+int y_max=-10000;  // We want these values to be extreme in the 
+int x_min=10000;   // opposite direction so it calibrates nicely
+int y_min=10000;
+
+void loop() {
+  int x, y, z;
+
+  // Initiate communications with compass
+  Wire.beginTransmission(Addr);
+  Wire.write(byte(0x03));       // Send request to X MSB register
+  Wire.endTransmission();
+
+  Wire.requestFrom(Addr, 6);    // Request 6 bytes; 2 bytes per axis
+  if(Wire.available() <=6) {    // If 6 bytes available
+    x = Wire.read() << 8 | Wire.read();
+    z = Wire.read() << 8 | Wire.read();
+    y = Wire.read() << 8 | Wire.read();
+  }
+  
+  // Print raw values
+  Serial.print("X=");
+  Serial.print(x);
+  Serial.print(", Y=");
+  Serial.print(y);
+  Serial.print(", Z=");
+  Serial.print(z);
+  
+  if(x > x_max) //Find values of hard iron distortion
+    x_max = x;  //This will store the max and min values
+  if(y >y_max)	//of the magnetic field around you
+    y_max = y;
+  if(y<y_min)
+    y_min = y;
+  if(x<x_min)
+    x_min = x;
+  
+  //Print max and min values
+  Serial.print(", Xmax=");
+  Serial.print(x_max);
+  Serial.print(", Ymax=");
+  Serial.print(y_max); 
+  Serial.print(", Xmin=");
+  Serial.print(x_min);
+  Serial.print(", Ymin=");
+  Serial.print(y_min);
+  
+  int xoffset= (x_max+x_min)/2;
+  int yoffset= (y_max+y_min)/2;
+  
+  int x_scale = x-xoffset; // Math to compensate for hard 
+  int y_scale = y-yoffset; // iron distortions
+  
+  // Heading in radians
+  float heading = atan2(x_scale,y_scale); 
+  
+  //Heading between 0 and 6.3 radians
+  if(heading < 0)
+    heading += 2*PI;
+    
+  if(heading>2*PI)
+    heading -= 2*PI;
+  
+  //Conversion to degrees  
+  int Degrees = heading * 180/M_PI; 
+  
+  
+  Serial.print("Heading (degrees): "); Serial.print(Degrees);
+  
+  int LED = Degrees/17; //Led shield has 21 Leds. Dividing 360 by
+  						//17 will give us values from 0 to 21
+  						
+  if (LED==0)	 		//since there is no Led 0, we will turn	
+    LED=21;				//Led 21 on instead
+   
+  LedOn(LED);
+  Serial.print("LED: "); Serial.println(LED);
+  
+  delay(40);
+}
+
+//Function to turn on the led indicated in the main loop
+void LedOn(int ledNum)
+{
+  for(int i=4;i<10;i++)
+  {
+    pinMode(i, INPUT);
+    digitalWrite(i, LOW);
+  };
+  if(ledNum<1 || ledNum>21) return;
+  char highpin[21]={6,7,6,8,5,8,8,7,9,7,9,8,5,9,6,9,9,5,6,5,7};
+  char lowpin[21]= {7,6,8,6,8,5,7,8,7,9,8,9,9,5,9,6,4,6,5,7,5};
+
+  ledNum--;
+  digitalWrite(highpin[ledNum],HIGH);
+  digitalWrite(lowpin[ledNum],LOW);
+  pinMode(highpin[ledNum],OUTPUT);
+  pinMode(lowpin[ledNum],OUTPUT);
+}
