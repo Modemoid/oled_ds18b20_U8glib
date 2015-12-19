@@ -25,6 +25,9 @@ U8GLIB_PCD8544 u8g(12, 11, 10, 9, 8);		// SPI Com: SCK = 13, MOSI = 11, CS = 10,
 #define acuOffsetW 0//по ширинеот левого бара 
 #define acuOffsetH -5 //по высоте от нижнего края
 #define HeadLight
+#define TurnSig
+#define ArrOffset 1
+
 int sensorPin = A0;    // select the input pin for the potentiometer
 int sensorValue = 0;  // variable to store the value coming from the sensor
 int sensorLat = 0;
@@ -42,6 +45,8 @@ int DrawH = 0;
 int FuelStart = 70, FuelEnd = 950; //ADC offset for fuel LVL sevsor
 char FuelLVLProcent = 0;
 char LbarH = 0;
+
+char TurnBlink = 1;
 
 //bitmap
 #ifdef Fuel_mark
@@ -208,15 +213,35 @@ void u8g_box_frame(uint8_t a) {
 
 #endif
 #ifdef HeadLight
-u8g.drawBitmapP( HBarW+2, heightLCD/2, 1, 9, lobeam_bitmap);
-u8g.drawBitmapP( HBarW+2+9, heightLCD/2, 1, 9, hibeam_bitmap);
 
-u8g.drawBitmapP( HBarW+2+18, heightLCD/2, 1, 7, lArr_bitmap);
-u8g.drawBitmapP( HBarW+2+27, heightLCD/2, 1, 7, rArr_bitmap);
-u8g.drawBitmapP( HBarW+2+36, heightLCD/2, 2, 11, chkeng_bitmap);
+u8g.drawBitmapP( HBarW+2+10, 0, 1, 9, lobeam_bitmap);
 
+u8g.drawBitmapP( HBarW+2+9+10,0, 1, 9, hibeam_bitmap);
 
 #endif
+#ifdef CheckEng
+u8g.drawBitmapP( HBarW+2+36, heightLCD/2, 2, 11, chkeng_bitmap);
+#endif
+
+#ifdef TurnSig
+
+u8g.drawLine(HBarW+1,8+ArrOffset, HBarW+1+9,8+ArrOffset);
+u8g.drawLine(HBarW+1+9,ArrOffset, HBarW+1+9,8+ArrOffset);
+
+u8g.drawLine(widthLCD-HBarW -2 -10,8+ArrOffset, widthLCD-HBarW -2-10+9,8+ArrOffset);
+u8g.drawLine(widthLCD-HBarW -2 -10,8+ArrOffset, widthLCD-HBarW -2-10+9-9,8+ArrOffset-9);
+
+
+  switch (TurnBlink) {
+    case 1: u8g.drawBitmapP( HBarW+2, ArrOffset, 1, 7, lArr_bitmap); break;
+    case 2: u8g.drawBitmapP( widthLCD-HBarW -2 -8, ArrOffset, 1, 7, rArr_bitmap);; break;
+    case 3: {  u8g.drawBitmapP( HBarW+2, ArrOffset, 1, 7, lArr_bitmap);
+  u8g.drawBitmapP( widthLCD-HBarW -2 -8, ArrOffset, 1, 7, rArr_bitmap);      
+      }; break;
+      
+  }
+#endif
+
 
   //left bar
   u8g.drawFrame(0 , 0, HBarW, heightLCD - LbarH );
@@ -281,7 +306,7 @@ void setup(void) {
   digitalWrite(13, HIGH);
 
   pinMode(3, OUTPUT); //backlight
-  analogWrite(3, 50);
+  analogWrite(3, 0);
 
 
 }
@@ -301,7 +326,8 @@ void loop(void) {
   //delay(500);
   // rebuild the picture after some delay
 
-  delay(100);
+  delay(50);
+  
   if (latency < Latcount)
   {
     latency++;
@@ -332,6 +358,10 @@ void loop(void) {
   } else
   {
     LbarH = 0;
+    TurnBlink++;
+    if (TurnBlink > 3 ){
+    TurnBlink=0;
+    }
   }
 }
 
