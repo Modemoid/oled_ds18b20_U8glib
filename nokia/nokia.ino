@@ -49,16 +49,16 @@ U8GLIB_PCD8544 u8g(12, 11, 10, 7, 8);		// SPI Com: SCK = 13, MOSI = 11, CS = 10,
 //ALL EXTERNAL PINS MUST HAVE LEVEL LIMITERS (ZENNER diode)
 //ALL EXTERNAL PINS MUST HAVE LEVEL LIMITERS (ZENNER diode)
 
-#define RTurnPin 2 //attach pins
-#define LTurnPin 3 //attach pins
-#define HeadBemPin 4 //attach pins
-#define LoBemPin 5 //attach pins
+#define RTurnPin 4 //attach pins
+#define LTurnPin 5 //attach pins
+#define HeadBemPin 2 //attach pins
+#define LoBemPin 3 //attach pins
 
 //ALL EXTERNAL PINS MUST HAVE LEVEL LIMITERS (ZENNER diode)
 //ALL EXTERNAL PINS MUST HAVE LEVEL LIMITERS (ZENNER diode)
 //ALL EXTERNAL PINS MUST HAVE LEVEL LIMITERS (ZENNER diode)
 
-int sensorPin = A0;   //Fuel level pin
+int sensorPin = A4;   //Fuel level pin
 int sensorValue = 0;  //
 int sensorLat = 0;
 
@@ -66,7 +66,7 @@ int PowerPin = A1; //"Power" level pin
 int PowerValue = 0;
 int PowerLat = 0;
 
-int VoltPin = A2; //BoardPower net  pin
+int VoltPin = A3; //BoardPower net  pin
 int VoltValue = 0;
 int VoltLat = 0;
 
@@ -493,7 +493,7 @@ void loop(void) {
     PowerValue = PowerLat / Latcount;
     PowerLat = 0;
 
-    VoltValue = map(VoltLat / Latcount, 404, 978, 70, 170); //r1=100k r2=39k koff=3.56 7v=1.97(RAW=404) 17v=4.78(RAW=978)
+    VoltValue = map(VoltLat / Latcount, 0, 1024, 0, 1024); //r1=100k r2=39k koff=3.56 7v=1.97(RAW=404) 17v=4.78(RAW=978) 6.7=996 
     //
     //VoltValue = VoltLat / Latcount;
     VoltLat = 0;
