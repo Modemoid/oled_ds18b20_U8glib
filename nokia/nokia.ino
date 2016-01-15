@@ -49,16 +49,16 @@ U8GLIB_PCD8544 u8g(12, 11, 10, 7, 8);		// SPI Com: SCK = 13, MOSI = 11, CS = 10,
 //ALL EXTERNAL PINS MUST HAVE LEVEL LIMITERS (ZENNER diode)
 //ALL EXTERNAL PINS MUST HAVE LEVEL LIMITERS (ZENNER diode)
 
-#define RTurnPin 2 //attach pins
-#define LTurnPin 3 //attach pins
-#define HeadBemPin 4 //attach pins
-#define LoBemPin 5 //attach pins
+#define RTurnPin 4 //attach pins
+#define LTurnPin 5 //attach pins
+#define HeadBemPin 2 //attach pins
+#define LoBemPin 3 //attach pins
 
 //ALL EXTERNAL PINS MUST HAVE LEVEL LIMITERS (ZENNER diode)
 //ALL EXTERNAL PINS MUST HAVE LEVEL LIMITERS (ZENNER diode)
 //ALL EXTERNAL PINS MUST HAVE LEVEL LIMITERS (ZENNER diode)
 
-int sensorPin = A0;   //Fuel level pin
+int sensorPin = A4;   //Fuel level pin
 int sensorValue = 0;  //
 int sensorLat = 0;
 
@@ -66,7 +66,7 @@ int PowerPin = A1; //"Power" level pin
 int PowerValue = 0;
 int PowerLat = 0;
 
-int VoltPin = A2; //BoardPower net  pin
+int VoltPin = A3; //BoardPower net  pin
 int VoltValue = 0;
 int VoltLat = 0;
 
@@ -424,8 +424,9 @@ void u8g_1screen(uint8_t a) {
 
 #ifdef ADC_debug
   //Raw a1 out
-  sprintf (buf, "a1=%d", PowerValue);
-  u8g.drawStr(widthLCD / 2 - 10, 25, buf);
+  sprintf (buf, "v=%d", analogRead(VoltPin));
+   u8g.drawStr(widthLCD / 2 - 10, 25, buf);
+  
 #endif
   //sensorValue
 }
@@ -449,7 +450,7 @@ void setup(void) {
   digitalWrite(13, HIGH);
 
   pinMode(backlight, OUTPUT); //backlight
-  analogWrite(backlight, 1);
+  analogWrite(backlight, 20);
 
   pinMode(RTurnPin, INPUT);
   pinMode(LTurnPin, INPUT);
@@ -475,6 +476,9 @@ void loop(void) {
 
   //   digitalWrite(13,digitalRead(2));
 
+//VoltLat =  analogRead(VoltPin);
+//VoltValue = map(VoltLat / Latcount, 0, 1023, 0, 263); //r1=100k r2=39k koff=3.56 7v=1.97(RAW=404) 17v=4.78(RAW=978) 6.7=996  KOFF=5.26 
+
   if (latency < Latcount)
   {
     latency++;
@@ -493,11 +497,14 @@ void loop(void) {
     PowerValue = PowerLat / Latcount;
     PowerLat = 0;
 
-    VoltValue = map(VoltLat / Latcount, 404, 978, 70, 170); //r1=100k r2=39k koff=3.56 7v=1.97(RAW=404) 17v=4.78(RAW=978)
-    //
-    //VoltValue = VoltLat / Latcount;
+    VoltValue = VoltLat / Latcount;
+    VoltValue = map(VoltLat / Latcount, 0, 1024, 0, 251); //r1=100k r2=39k koff=3.56 7v=1.97(RAW=404) 17v=4.78(RAW=978) 6.7=996 
     VoltLat = 0;
+
+    //
+    
   }
+  
 
   if (LbarH < 48)
   {
