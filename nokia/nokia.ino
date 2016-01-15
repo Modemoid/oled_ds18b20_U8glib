@@ -330,9 +330,9 @@ void u8g_1screen(uint8_t a) {
 #endif
 #ifdef HeadLight
 
-  u8g.drawBitmapP(28, 0, 1, 9, lobeam_bitmap);
+  u8g.drawBitmapP(27, 0, 2, 15, BigLoBeam_bitmap);
 
-  u8g.drawBitmapP(44, 0, 1, 9, hibeam_bitmap);
+  u8g.drawBitmapP(43, 0, 2, 15, BigHiBeam_bitmap);
 
 #endif
 
